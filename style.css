@@ -296,7 +296,7 @@ main > section { padding-block: var(--section-pad); }
 
 .btn-header-cta { display: none; flex-shrink: 0; }
 
-.btn-submit { width: 100%; }
+.btn-submit { width: 100%; white-space: normal; text-align: center; }
 
 /* ---------------------------------------------------------------------------
    5. HEADER
@@ -399,7 +399,7 @@ main > section { padding-block: var(--section-pad); }
 }
 .mobile-nav.is-open { transform: translateX(0); }
 .mobile-nav ul { display: flex; flex-direction: column; gap: var(--space-sm); }
-.mobile-nav a {
+.mobile-nav ul a {
   font-family: var(--f-display);
   font-size: clamp(1.8rem, 8vw, 2.4rem);
   color: var(--c-navy);
@@ -876,6 +876,51 @@ main > section { padding-block: var(--section-pad); }
   font-size: var(--fs-small);
 }
 
+/* Compact price list for individual services — intentionally quiet,
+   secondary to the package cards above. */
+.mini-pricing {
+  max-width: 720px;
+  margin: var(--space-xl) auto 0;
+  padding-top: var(--space-lg);
+  border-top: 1px solid var(--c-line);
+}
+.mini-pricing-heading {
+  font-size: var(--fs-h3);
+  text-align: center;
+  margin-bottom: var(--space-2xs);
+}
+.mini-pricing-lead {
+  text-align: center;
+  color: var(--c-muted);
+  font-size: var(--fs-small);
+  max-width: 46rem;
+  margin: 0 auto var(--space-md);
+}
+.mini-price-list { display: flex; flex-direction: column; }
+.mini-price-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-sm);
+  padding-block: 0.85rem;
+  border-top: 1px solid var(--c-line-soft);
+}
+.mini-price-list li:last-child { border-bottom: 1px solid var(--c-line-soft); }
+.mini-price-name { color: var(--c-ink); font-size: var(--fs-small); }
+.mini-price-value {
+  flex-shrink: 0;
+  color: var(--c-muted);
+  font-style: italic;
+  font-size: var(--fs-small);
+  white-space: nowrap;
+}
+.mini-pricing-note {
+  text-align: center;
+  color: var(--c-muted);
+  font-size: 0.8rem;
+  margin-top: var(--space-md);
+}
+
 /* ---------------------------------------------------------------------------
    13. FAQ
    ------------------------------------------------------------------------ */
@@ -949,8 +994,11 @@ main > section { padding-block: var(--section-pad); }
 .contact { background: var(--c-paper-dim); }
 .contact-inner {
   display: grid;
+  grid-template-columns: 1fr;
   gap: var(--space-xl);
+  min-width: 0;
 }
+.contact-inner > * { min-width: 0; }
 
 .contact-intro h2 { margin-bottom: var(--space-xs); }
 
@@ -992,7 +1040,7 @@ main > section { padding-block: var(--section-pad); }
   position: relative;
 }
 
-.form-row { display: flex; flex-direction: column; gap: 0.5rem; }
+.form-row { display: flex; flex-direction: column; gap: 0.5rem; min-width: 0; }
 .form-row--full { grid-column: 1 / -1; }
 
 .form-row label {
