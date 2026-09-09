@@ -606,16 +606,13 @@ main > section { padding-block: var(--section-pad); }
   transform: translate(var(--mx, 0px), var(--my, 0px));
   transition: transform 0.5s var(--ease);
 }
-/* Below 1024px the hero is a single stacked column (no separate empty
-   right column for the mark to sit in), so push it down clear of the
-   headline instead of letting it collide with the text. */
+/* Below 1024px the hero is a single stacked column with no empty area
+   left for the mark to sit in without colliding with text — the hero's
+   height also varies with content, so no fixed position stays clear
+   reliably. Hide it rather than force it into a spot it doesn't fit. */
 @media (max-width: 1023px) {
   .hero-bg::after {
-    top: auto;
-    bottom: 4%;
-    right: -14%;
-    width: min(62vw, 320px);
-    height: min(62vw, 320px);
+    display: none;
   }
 }
 
