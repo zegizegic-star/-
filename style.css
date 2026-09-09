@@ -341,9 +341,11 @@ main > section { padding-block: var(--section-pad); }
 }
 .eyebrow::before {
   content: '';
-  width: 28px;
-  height: 1px;
-  background: var(--c-gold);
+  width: 7px;
+  height: 7px;
+  flex-shrink: 0;
+  border: 1.5px solid var(--c-gold);
+  transform: rotate(45deg);
 }
 
 .section-lead {
@@ -574,6 +576,20 @@ main > section { padding-block: var(--section-pad); }
     linear-gradient(200deg, rgba(212, 175, 55, 0.05) 0%, rgba(212, 175, 55, 0.02) 45%, transparent 72%),
     radial-gradient(45% 40% at 8% 95%, rgba(11, 19, 32, 0.05), transparent 70%);
 }
+/* Oversized brand mark bleeding off the edge — the one "signature"
+   moment in the hero, echoing the logo at a scale nobody else uses. */
+.hero-bg::after {
+  content: '';
+  position: absolute;
+  right: -6%;
+  top: 8%;
+  width: min(46vw, 600px);
+  height: min(46vw, 600px);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Cpath d='M25,20 L75,20 L75,48 C75,68 63,82 50,88 C37,82 25,68 25,48 Z' fill='none' stroke='%230B1320' stroke-width='0.6'/%3E%3Cpath d='M50,37 L61,50 L50,63 L39,50 Z' fill='none' stroke='%230B1320' stroke-width='0.5'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-size: contain;
+  opacity: 0.05;
+}
 
 .hero-columns {
   position: relative;
@@ -587,8 +603,7 @@ main > section { padding-block: var(--section-pad); }
   color: var(--c-muted);
 }
 .hero .eyebrow::before {
-  width: 20px;
-  background: var(--c-gold-light);
+  border-color: var(--c-gold-light);
   opacity: 0.8;
 }
 
@@ -832,13 +847,26 @@ main > section { padding-block: var(--section-pad); }
 }
 .why-content h2 { margin-bottom: var(--space-xs); }
 
-/* Reusable luxury hairline divider between sections */
+/* Reusable luxury hairline divider between sections, with the brand
+   gem mark set into its centre like a jeweller's mark. */
 .section-divider {
+  position: relative;
   display: block;
   width: min(120px, 20%);
   height: 1px;
   margin: 0 auto var(--space-lg);
   background: linear-gradient(90deg, transparent, var(--c-gold) 50%, transparent);
+}
+.section-divider::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 7px;
+  height: 7px;
+  background: none;
+  border: 1.5px solid var(--c-gold);
+  transform: translate(-50%, -50%) rotate(45deg);
 }
 
 .why-quote {
@@ -852,7 +880,9 @@ main > section { padding-block: var(--section-pad); }
   object-fit: cover;
   border-radius: var(--r-md);
   flex-shrink: 0;
+  border: 1px solid rgba(212, 175, 55, 0.45);
   box-shadow: var(--shadow-md);
+  filter: saturate(0.9) sepia(0.08) contrast(1.03);
 }
 .why-quote-content {
   border-left: 2px solid var(--c-gold);
@@ -976,7 +1006,7 @@ main > section { padding-block: var(--section-pad); }
 }
 .cases .container { position: relative; z-index: 1; }
 .cases .eyebrow { color: var(--c-gold-light); }
-.cases .eyebrow::before { background: var(--c-gold-light); }
+.cases .eyebrow::before { border-color: var(--c-gold-light); }
 .cases h2 { color: var(--c-white); }
 
 .cases-grid {

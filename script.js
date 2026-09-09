@@ -350,48 +350,6 @@
      so no keyframes or extra classes are needed in the stylesheet.
      Skipped entirely under reduced-motion.
      ---------------------------------------------------------------- */
-  function initRippleEffect() {
-    if (prefersReducedMotion()) return;
-
-    const buttons = qsa('.btn');
-    if (!buttons.length) return;
-
-    buttons.forEach((btn) => {
-      btn.addEventListener('click', (event) => {
-        const rect = btn.getBoundingClientRect();
-        const size = Math.max(rect.width, rect.height) * 1.6;
-        const originX = event.clientX ?? rect.left + rect.width / 2;
-        const originY = event.clientY ?? rect.top + rect.height / 2;
-        const x = originX - rect.left - size / 2;
-        const y = originY - rect.top - size / 2;
-
-        const ripple = document.createElement('span');
-        ripple.style.cssText = [
-          'position: absolute',
-          `left: ${x}px`,
-          `top: ${y}px`,
-          `width: ${size}px`,
-          `height: ${size}px`,
-          'border-radius: 50%',
-          'background: currentColor',
-          'opacity: 0.25',
-          'pointer-events: none',
-        ].join(';');
-        btn.appendChild(ripple);
-
-        const animation = ripple.animate(
-          [
-            { transform: 'scale(0)', opacity: 0.35 },
-            { transform: 'scale(1)', opacity: 0 },
-          ],
-          { duration: 600, easing: 'cubic-bezier(0.16, 1, 0.3, 1)' }
-        );
-
-        animation.onfinish = () => ripple.remove();
-      });
-    });
-  }
-
   /* -------------------------------------------------------------------
      9. LAZY LOADING
      Defers offscreen media until it's about to enter the viewport.
@@ -622,7 +580,6 @@
     initScrollReveal();
     initCounters();
     initFAQ();
-    initRippleEffect();
     initLazyLoading();
     initContactForm();
     initServiceQuickSelect();
