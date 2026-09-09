@@ -851,9 +851,10 @@
     const calcMargin = qs('#calcMargin', section);
     const calcDays = qs('#calcDays', section);
     const calcFixed = qs('#calcFixed', section);
+    const calcFrozen = qs('#calcFrozen', section);
+    const calcFines = qs('#calcFines', section);
     const calcResult = qs('#calcResult', section);
     const calcLoss = qs('#calcLoss', section);
-    const calcCaption = qs('#calcCaption', section);
     const calcCompare = qs('#calcCompare', section);
 
     // Real price already listed above in #pricing — turns the raw
@@ -867,6 +868,8 @@
       const margin = parseFloat(calcMargin.value);
       const days = parseFloat(calcDays.value);
       const fixedPerDay = parseFloat(calcFixed ? calcFixed.value : '') || 0;
+      const frozenStock = parseFloat(calcFrozen ? calcFrozen.value : '') || 0;
+      const fines = parseFloat(calcFines ? calcFines.value : '') || 0;
 
       if (!revenue || !margin || !days || revenue <= 0 || margin <= 0 || days <= 0) {
         calcResult.hidden = true;
@@ -876,17 +879,13 @@
       // Loss isn't the full revenue — without sales, money also isn't
       // spent on stock/logistics for those sales. What's actually lost
       // is the profit on them, plus whatever keeps costing money
-      // regardless (storage, ads, staff).
+      // regardless (storage, ads, staff), plus capital tied up in
+      // stock stuck on the warehouse and any fines from the platform —
+      // both one-off amounts, not multiplied by days.
       const lostProfit = revenue * (margin / 100) * days;
       const ongoingCosts = fixedPerDay * days;
-      const loss = Math.round(lostProfit + ongoingCosts);
+      const loss = Math.round(lostProfit + ongoingCosts + frozenStock + fines);
       calcLoss.textContent = loss.toLocaleString('ru-RU') + ' ₽';
-
-      if (calcCaption) {
-        calcCaption.textContent = ongoingCosts > 0
-          ? 'недополученной прибыли и расходов, которые продолжаются, за указанный период'
-          : 'недополученной прибыли за указанный период';
-      }
 
       if (calcCompare) {
         const ratio = loss / BASE_PACKAGE_PRICE;
@@ -901,7 +900,7 @@
 
       calcResult.hidden = false;
     }
-    [calcRevenue, calcMargin, calcDays, calcFixed].forEach((el) => {
+    [calcRevenue, calcMargin, calcDays, calcFixed, calcFrozen, calcFines].forEach((el) => {
       if (el) el.addEventListener('input', updateCalc);
     });
   }

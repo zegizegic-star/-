@@ -775,12 +775,20 @@
                 <label for="calcFixed">Расходы в день, которые продолжаются несмотря на блокировку — склад, реклама, зарплата <span class="optional">(необязательно)</span></label>
                 <input type="number" id="calcFixed" inputmode="numeric" min="0" step="100" placeholder="Например, 500">
               </div>
+              <div class="diagnostic-calc-field">
+                <label for="calcFrozen">Себестоимость товара, зависшего на складе <span class="optional">(необязательно)</span></label>
+                <input type="number" id="calcFrozen" inputmode="numeric" min="0" step="1000" placeholder="Например, 40000">
+              </div>
+              <div class="diagnostic-calc-field">
+                <label for="calcFines">Штрафы или удержания от площадки, ₽ <span class="optional">(необязательно)</span></label>
+                <input type="number" id="calcFines" inputmode="numeric" min="0" step="500" placeholder="Например, 3000">
+              </div>
             </div>
             <div class="diagnostic-calc-result" id="calcResult" hidden>
               <p class="diagnostic-calc-figure" id="calcLoss">0 ₽</p>
-              <p class="diagnostic-calc-caption" id="calcCaption">недополученной прибыли за указанный период</p>
+              <p class="diagnostic-calc-caption">приблизительная оценка полных потерь</p>
               <p class="diagnostic-calc-compare" id="calcCompare"></p>
-              <p class="diagnostic-calc-note">Расчёт приблизительный: считает недополученную прибыль (не всю выручку — ведь без продаж не тратится и на закупку) плюс расходы, которые продолжаются несмотря на блокировку. Не учитывает возможную потерю позиций в поиске и рейтинга карточки после снятия блокировки — обычно это дополнительные потери.</p>
+              <p class="diagnostic-calc-note">Считает недополученную прибыль (не всю выручку — без продаж не тратится и на закупку), расходы, которые продолжаются несмотря на блокировку, стоимость зависшего на складе товара и штрафы площадки. Не учитывает возможную потерю позиций в поиске и рейтинга карточки после снятия блокировки — обычно это дополнительные потери.</p>
               <a href="#contact" class="btn btn-outline" data-service="blocking-defense">Узнать, как снять блокировку →</a>
             </div>
           </div>
