@@ -1,20 +1,26 @@
 /* Yandex Cloud Function — receives the site's contact form (as JSON)
-   and forwards it to Telegram via the Bot API. Runs on servers
-   physically in Russia, unlike the previous FormSubmit.co setup, so
-   personal data is first recorded/processed in the RF as required by
-   152-FZ, before it reaches the lawyer via Telegram.
+   and emails it via SMTP. Runs on servers physically in Russia,
+   unlike the previous FormSubmit.co setup, so personal data is first
+   recorded/processed in the RF as required by 152-FZ.
 
-   Runtime: Node.js 18 (needs the global fetch() it ships with — no
-   npm dependencies, so this single file can be pasted directly into
-   the Yandex Cloud console editor).
+   Runtime: Node.js 18. Needs the "nodemailer" dependency — deploy the
+   zip built alongside this file (index.js + package.json +
+   node_modules), not just this file pasted into the console editor.
 
    Required environment variables (set in the function's config):
-     BOT_TOKEN — the Telegram bot token from @BotFather
-     CHAT_ID   — the numeric chat id to send messages to
+     SMTP_USER — the sending Yandex mailbox, e.g. name@yandex.ru
+     SMTP_PASS — an app password for that mailbox (not the normal
+                 account password — generate one in Yandex ID security
+                 settings, "Пароли приложений")
+     TO_EMAIL  — where submissions should land (defaults to SMTP_USER
+                 if not set, so you can send and receive on the same
+                 mailbox)
 
    Required setting: enable public HTTP access on the function/trigger
    so the browser can call it directly (no auth token needed).
 */
+
+const nodemailer = require('nodemailer');
 
 const SERVICE_LABELS = {
   'seller-protection': 'Защита продавцов маркетплейсов',
@@ -37,6 +43,22 @@ const CORS_HEADERS = {
 
 function json(statusCode, body) {
   return { statusCode, headers: { ...CORS_HEADERS, 'Content-Type': 'application/json' }, body: JSON.stringify(body) };
+}
+
+let transporter;
+function getTransporter() {
+  if (!transporter) {
+    transporter = nodemailer.createTransport({
+      host: 'smtp.yandex.ru',
+      port: 465,
+      secure: true,
+      auth: {
+        user: process.env.SMTP_USER,
+        pass: process.env.SMTP_PASS,
+      },
+    });
+  }
+  return transporter;
 }
 
 module.exports.handler = async function (event) {
@@ -72,25 +94,20 @@ module.exports.handler = async function (event) {
     return json(400, { error: 'Validation failed' });
   }
 
-  const lines = [
-    '📩 Новая заявка с сайта ip-zashita.ru',
-    `Имя: ${name}`,
-    `Email: ${email}`,
-  ];
+  const serviceLabel = SERVICE_LABELS[service] || service;
+  const lines = [`Имя: ${name}`, `Email: ${email}`];
   if (company) lines.push(`Компания: ${company}`);
-  lines.push(`Услуга: ${SERVICE_LABELS[service] || service}`);
-  lines.push(`Описание: ${description}`);
+  lines.push(`Услуга: ${serviceLabel}`, '', 'Описание задачи:', description);
 
-  const botToken = process.env.BOT_TOKEN;
-  const chatId = process.env.CHAT_ID;
-
-  const tgResponse = await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ chat_id: chatId, text: lines.join('\n') }),
-  });
-
-  if (!tgResponse.ok) {
+  try {
+    await getTransporter().sendMail({
+      from: process.env.SMTP_USER,
+      to: process.env.TO_EMAIL || process.env.SMTP_USER,
+      replyTo: email,
+      subject: `Новая заявка с сайта — ${serviceLabel}`,
+      text: lines.join('\n'),
+    });
+  } catch (e) {
     return json(502, { error: 'Delivery failed' });
   }
 

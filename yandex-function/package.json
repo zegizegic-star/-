@@ -1,0 +1,8 @@
+{
+  "name": "contact-form-relay",
+  "version": "1.0.0",
+  "private": true,
+  "dependencies": {
+    "nodemailer": "^10.0.1"
+  }
+}
