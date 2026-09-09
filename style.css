@@ -843,11 +843,29 @@ main > section { padding-block: var(--section-pad); }
   line-height: var(--lh-snug);
   margin-bottom: var(--space-2xs);
 }
+.why-quote-author {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+}
+.why-quote-photo {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  object-fit: cover;
+  flex-shrink: 0;
+  border: 1px solid var(--c-line);
+}
 .why-quote cite {
   font-style: normal;
   font-size: var(--fs-small);
   color: var(--c-muted);
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
 }
+.why-quote-name { font-weight: 600; color: var(--c-navy); }
+.why-quote-role { color: var(--c-muted); }
 
 .why-features {
   display: grid;
