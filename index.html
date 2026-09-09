@@ -470,6 +470,15 @@
       <div class="section-head">
         <p class="eyebrow" data-reveal>Метод работы</p>
         <h2 id="process-heading" data-reveal>Четырёхшаговый алгоритм защиты</h2>
+        <p class="section-lead" data-reveal>Один и тот же алгоритм применяется по-разному в зависимости от ситуации — выберите свою, чтобы увидеть детали на каждом шаге.</p>
+      </div>
+
+      <div class="process-map-select" role="group" aria-label="Показать алгоритм для конкретной ситуации" data-reveal>
+        <button type="button" class="process-map-chip" data-map-situation="blocking-defense">Блокировка</button>
+        <button type="button" class="process-map-chip" data-map-situation="trademark-defense">Претензия</button>
+        <button type="button" class="process-map-chip" data-map-situation="litigation">Контрафакт</button>
+        <button type="button" class="process-map-chip" data-map-situation="trademark-registration">Регистрация ТЗ</button>
+        <button type="button" class="process-map-chip process-map-reset" hidden>Сбросить ×</button>
       </div>
 
       <ol class="process-list">
@@ -478,6 +487,7 @@
           <div class="process-body">
             <h3>Анализ нарушения</h3>
             <p>Проводим детальный анализ вашего объекта прав, выявляем факты нарушения, оцениваем риски и фиксируем доказательства.</p>
+            <p class="process-step-note" data-map-step="1" hidden></p>
           </div>
           <span class="process-time">Оперативно</span>
         </li>
@@ -486,6 +496,7 @@
           <div class="process-body">
             <h3>Разработка плана защиты</h3>
             <p>На основе анализа выбираем оптимальный способ защиты — досудебный, судебный или административный — и составляем перечень действий.</p>
+            <p class="process-step-note" data-map-step="2" hidden></p>
           </div>
           <span class="process-time">Индивидуально</span>
         </li>
@@ -494,6 +505,7 @@
           <div class="process-body">
             <h3>Юридические рекомендации</h3>
             <p>Даём письменные и устные консультации на каждом этапе, помогаем принимать взвешенные решения и минимизировать риски.</p>
+            <p class="process-step-note" data-map-step="3" hidden></p>
           </div>
           <span class="process-time">На каждом этапе</span>
         </li>
@@ -502,6 +514,7 @@
           <div class="process-body">
             <h3>Активные действия</h3>
             <p>Направляем претензию, добиваемся блокировки карточек нарушителей на маркетплейсах, подаём исковое заявление и ведём дело в суде.</p>
+            <p class="process-step-note" data-map-step="4" hidden></p>
           </div>
           <span class="process-time">Последовательно</span>
         </li>

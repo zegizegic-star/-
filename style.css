@@ -1009,6 +1009,43 @@ main > section { padding-block: var(--section-pad); }
 .process-body h3 { font-size: var(--fs-h3); margin-bottom: 0.35rem; }
 .process-body p { color: var(--c-muted); max-width: 40rem; }
 
+/* Lets a visitor pick their own situation and see how the same 4 steps
+   apply specifically to it — recombines content that already exists
+   elsewhere on the site (services, cases, diagnostic) into one view. */
+.process-map-select {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+  margin-bottom: var(--space-lg);
+}
+.process-map-chip {
+  padding: 0.5em 1.1em;
+  border: 1px solid var(--c-line);
+  border-radius: var(--r-pill);
+  background: var(--c-white);
+  font-size: var(--fs-small);
+  color: var(--c-navy);
+  transition: border-color var(--t-fast), background var(--t-fast), color var(--t-fast);
+}
+.process-map-chip:hover { border-color: var(--c-gold-light); }
+.process-map-chip.is-active {
+  background: var(--c-navy);
+  border-color: var(--c-navy);
+  color: var(--c-white);
+}
+.process-map-reset { border-style: dashed; color: var(--c-muted); }
+
+.process-step-note {
+  margin-top: var(--space-sm);
+  padding: 0.7em 1em;
+  background: var(--c-paper-dim);
+  border-left: 2px solid var(--c-gold);
+  border-radius: var(--r-sm);
+  font-size: var(--fs-small);
+  color: var(--c-navy);
+  max-width: 40rem;
+}
+
 .process-time {
   grid-column: 2;
   justify-self: start;

@@ -869,6 +869,75 @@
   }
 
   /* -------------------------------------------------------------------
+     15. PROCESS MAP
+     Lets a visitor pick their own situation (same 4 options as the
+     diagnostic quiz) and see how the 4-step algorithm plays out
+     specifically for it. Recombines content that already exists
+     elsewhere on the site — no new claims, just a different, more
+     situation-specific view of it.
+     ---------------------------------------------------------------- */
+  function initProcessMap() {
+    const selector = qs('.process-map-select');
+    if (!selector) return;
+
+    const notes = {
+      'blocking-defense': [
+        'Изучаем уведомление площадки и причину блокировки, оцениваем, что нужно для апелляции.',
+        'Готовим аргументированную апелляцию в личном кабинете площадки со ссылкой на документы.',
+        'Консультируем, что делать с карточками и перепиской до снятия блокировки.',
+        'Подаём апелляцию, а при отказе — претензию инициатору или готовимся к суду.',
+      ],
+      'trademark-defense': [
+        'Проверяем обоснованность претензии и права заявителя на товарный знак.',
+        'Выбираем между досудебным ответом и подготовкой к возможному спору.',
+        'Рекомендуем, как отвечать площадке и правообладателю на каждом шаге.',
+        'Направляем мотивированный ответ и, если нужно, участвуем в споре.',
+      ],
+      litigation: [
+        'Фиксируем нарушение в чужой карточке и собираем доказательства вашего приоритета.',
+        'Определяем: обращаться к площадке за блокировкой карточки или готовить претензию сразу.',
+        'Советуем, как действовать, если нарушитель не реагирует на первое обращение.',
+        'Добиваемся блокировки карточки нарушителя и взыскиваем компенсацию.',
+      ],
+      'trademark-registration': [
+        'Проверяем обозначение по базам Роспатента и подбираем классы МКТУ.',
+        'Формируем пакет документов для подачи заявки в Роспатент.',
+        'Поясняем сроки экспертизы и как реагировать на запросы Роспатента.',
+        'Подаём заявку и ведём её до получения свидетельства.',
+      ],
+    };
+
+    const chips = qsa('.process-map-chip[data-map-situation]', selector);
+    const resetBtn = qs('.process-map-reset', selector);
+    const noteEls = qsa('.process-step-note');
+
+    function activate(situation) {
+      chips.forEach((c) => c.classList.toggle('is-active', c.dataset.mapSituation === situation));
+      if (resetBtn) resetBtn.hidden = !situation;
+
+      if (!situation) {
+        noteEls.forEach((el) => { el.hidden = true; });
+        return;
+      }
+      const texts = notes[situation] || [];
+      noteEls.forEach((el) => {
+        const step = parseInt(el.dataset.mapStep, 10);
+        const text = texts[step - 1];
+        el.textContent = text || '';
+        el.hidden = !text;
+      });
+    }
+
+    chips.forEach((chip) => {
+      chip.addEventListener('click', () => {
+        const isAlreadyActive = chip.classList.contains('is-active');
+        activate(isAlreadyActive ? null : chip.dataset.mapSituation);
+      });
+    });
+    if (resetBtn) resetBtn.addEventListener('click', () => activate(null));
+  }
+
+  /* -------------------------------------------------------------------
      INIT
      ---------------------------------------------------------------- */
   document.addEventListener('DOMContentLoaded', () => {
@@ -886,6 +955,7 @@
     initContactForm();
     initServiceQuickSelect();
     initDiagnosticTool();
+    initProcessMap();
     initFooterYear();
     initMobileCta();
     initReadingProgress();
