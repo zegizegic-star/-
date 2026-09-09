@@ -1476,7 +1476,7 @@ main > section { padding-block: var(--section-pad); }
     border-left: 1px solid rgba(212, 175, 55, 0.35);
   }
 
-  .hero-ticker { grid-template-columns: repeat(5, 1fr); }
+  .hero-ticker { grid-template-columns: repeat(2, 1fr); max-width: 32rem; }
   .hero-ticker-item {
     padding-right: var(--space-md);
     padding-bottom: 0;
