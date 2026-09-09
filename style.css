@@ -1239,17 +1239,6 @@ main > section { padding-block: var(--section-pad); }
   border-radius: var(--r-pill);
 }
 
-.contact-email {
-  margin-top: var(--space-lg);
-  font-family: var(--f-display);
-  font-size: clamp(1.3rem, 1.1rem + 1vw, 1.8rem);
-}
-.contact-email a {
-  border-bottom: 1px solid var(--c-gold);
-  transition: color var(--t-fast);
-}
-.contact-email a:hover { color: var(--c-gold-dark); }
-
 .contact-urgent {
   margin-top: var(--space-lg);
   padding: var(--space-sm) var(--space-md);
