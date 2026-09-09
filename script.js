@@ -345,11 +345,63 @@
   }
 
   /* -------------------------------------------------------------------
-     8. RIPPLE BUTTON EFFECT
-     Lightweight, dependency-free ripple using the Web Animations API
-     so no keyframes or extra classes are needed in the stylesheet.
-     Skipped entirely under reduced-motion.
+     8a. HERO PARALLAX
+     Subtle mouse-driven depth on the oversized brand-mark watermark.
+     Mouse-only (pointer: fine) and skipped under reduced-motion.
      ---------------------------------------------------------------- */
+  function initHeroParallax() {
+    const hero = qs('.hero');
+    const bg = qs('.hero-bg');
+    if (!hero || !bg) return;
+    if (prefersReducedMotion()) return;
+    if (!window.matchMedia('(pointer: fine)').matches) return;
+
+    const RANGE = 16; // max px shift in any direction
+
+    hero.addEventListener('mousemove', (event) => {
+      const rect = hero.getBoundingClientRect();
+      const nx = (event.clientX - rect.left) / rect.width - 0.5; // -0.5..0.5
+      const ny = (event.clientY - rect.top) / rect.height - 0.5;
+      bg.style.setProperty('--mx', `${nx * RANGE * -1}px`);
+      bg.style.setProperty('--my', `${ny * RANGE * -1}px`);
+    });
+
+    hero.addEventListener('mouseleave', () => {
+      bg.style.setProperty('--mx', '0px');
+      bg.style.setProperty('--my', '0px');
+    });
+  }
+
+  /* -------------------------------------------------------------------
+     8b. MAGNETIC BUTTONS
+     The primary hero CTA leans gently toward the cursor within its own
+     bounds — a small, deliberate touch, not a gimmick. Mouse-only,
+     skipped under reduced-motion.
+     ---------------------------------------------------------------- */
+  function initMagneticButtons() {
+    const buttons = qsa('[data-magnetic]');
+    if (!buttons.length) return;
+    if (prefersReducedMotion()) return;
+    if (!window.matchMedia('(pointer: fine)').matches) return;
+
+    const STRENGTH = 0.25;
+    const MAX_SHIFT = 8;
+
+    buttons.forEach((btn) => {
+      btn.addEventListener('mousemove', (event) => {
+        const rect = btn.getBoundingClientRect();
+        const x = event.clientX - rect.left - rect.width / 2;
+        const y = event.clientY - rect.top - rect.height / 2;
+        const shiftX = Math.max(-MAX_SHIFT, Math.min(MAX_SHIFT, x * STRENGTH));
+        const shiftY = Math.max(-MAX_SHIFT, Math.min(MAX_SHIFT, y * STRENGTH));
+        btn.style.transform = `translate(${shiftX}px, ${shiftY}px)`;
+      });
+      btn.addEventListener('mouseleave', () => {
+        btn.style.transform = '';
+      });
+    });
+  }
+
   /* -------------------------------------------------------------------
      9. LAZY LOADING
      Defers offscreen media until it's about to enter the viewport.
@@ -580,6 +632,8 @@
     initScrollReveal();
     initCounters();
     initFAQ();
+    initHeroParallax();
+    initMagneticButtons();
     initLazyLoading();
     initContactForm();
     initServiceQuickSelect();
