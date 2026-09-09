@@ -603,7 +603,11 @@
   /* -------------------------------------------------------------------
      12. MOBILE STICKY CTA
      Hides itself once the real contact form scrolls into view, so it
-     never sits on top of the form it's meant to lead people to.
+     never sits on top of the form it's meant to lead people to. Also
+     hides while actively scrolling down (it was sitting over content
+     the whole time someone was reading) and reappears the moment they
+     scroll up or pause — still reachable, just not permanently in the
+     way.
      ---------------------------------------------------------------- */
   function initMobileCta() {
     const bar = qs('.mobile-cta');
@@ -611,13 +615,9 @@
     const footer = qs('.site-footer');
     if (!bar || !contactSection) return;
 
-    // Hidden while the contact form itself is in view (no need for the
-    // shortcut right above the real form), and hidden again for the
-    // footer so the fixed bar never sits over the legal links at the
-    // very bottom of the page.
-    const state = { contact: false, footer: false };
+    const state = { contact: false, footer: false, scrollingDown: false };
     const applyState = () => {
-      bar.classList.toggle('is-hidden', state.contact || state.footer);
+      bar.classList.toggle('is-hidden', state.contact || state.footer || state.scrollingDown);
     };
 
     const contactObserver = new IntersectionObserver(
@@ -636,6 +636,25 @@
       });
       footerObserver.observe(footer);
     }
+
+    let lastScrollY = window.scrollY;
+    let idleTimer;
+    window.addEventListener(
+      'scroll',
+      () => {
+        const currentY = window.scrollY;
+        state.scrollingDown = currentY > lastScrollY && currentY > 80;
+        lastScrollY = currentY;
+        applyState();
+
+        clearTimeout(idleTimer);
+        idleTimer = setTimeout(() => {
+          state.scrollingDown = false;
+          applyState();
+        }, 400);
+      },
+      { passive: true }
+    );
   }
 
   /* -------------------------------------------------------------------

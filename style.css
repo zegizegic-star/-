@@ -1973,18 +1973,21 @@ main > section { padding-block: var(--section-pad); }
    rather than a hover tooltip, so it works identically on touch. */
 .gloss-term {
   display: inline;
-  padding: 0;
+  padding: 0.05em 0.35em;
   border: none;
-  background: none;
+  background: rgba(212, 175, 55, 0.14);
+  border-radius: 4px;
   font: inherit;
-  color: inherit;
+  color: var(--c-gold-dark);
   border-bottom: 1px dotted var(--c-gold-dark);
   cursor: pointer;
+  transition: background var(--t-fast), color var(--t-fast);
 }
 .gloss-term:hover,
 .gloss-term[aria-expanded="true"] {
+  background: rgba(212, 175, 55, 0.28);
   border-bottom-style: solid;
-  color: var(--c-gold-dark);
+  color: var(--c-navy);
 }
 .gloss-def:not([hidden]) {
   display: block;
