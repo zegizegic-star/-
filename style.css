@@ -829,12 +829,12 @@ main > section { padding-block: var(--section-pad); }
 .service-card-index {
   font-family: var(--f-display);
   font-size: clamp(1.4rem, 1.2rem + 0.8vw, 1.9rem);
-  color: var(--c-gold);
+  color: var(--c-gold-dark);
   line-height: 1;
   margin-bottom: var(--space-sm);
   transition: color var(--t-med);
 }
-.service-card:hover .service-card-index { color: var(--c-gold-dark); }
+.service-card:hover .service-card-index { color: var(--c-navy); }
 
 .service-card h3 { font-size: var(--fs-h3); margin-bottom: var(--space-2xs); }
 .service-card p { color: var(--c-muted); flex-grow: 1; margin-bottom: var(--space-md); }
