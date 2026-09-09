@@ -697,6 +697,11 @@
       </div>
 
       <form class="contact-form" id="contactForm" data-reveal novalidate>
+        <input type="hidden" name="_subject" value="Новая заявка с сайта ip-zashita.ru">
+        <input type="hidden" name="_template" value="table">
+        <input type="hidden" name="_captcha" value="false">
+        <input type="text" name="_honey" style="display:none" tabindex="-1" autocomplete="off">
+
         <div class="form-row">
           <label for="name">Имя <span aria-hidden="true">*</span></label>
           <input type="text" id="name" name="name" autocomplete="name" required aria-describedby="error-name">
@@ -747,6 +752,10 @@
 
         <div class="form-success" id="formSuccess" role="status" aria-live="polite" hidden>
           <p><strong>Заявка отправлена.</strong> Мы ответим на указанный email в ближайшее рабочее время (ежедневно 9:00–21:00 Мск).</p>
+        </div>
+
+        <div class="form-error-box" id="formError" role="alert" aria-live="assertive" hidden>
+          <p><strong>Не удалось отправить заявку.</strong> Пожалуйста, напишите нам напрямую на <a href="mailto:sergeyvlg777@yandex.ru">sergeyvlg777@yandex.ru</a>.</p>
         </div>
       </form>
     </div>

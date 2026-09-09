@@ -429,14 +429,17 @@
      10. CONTACT FORM
      Client-side validation with inline, screen-reader-announced errors
      (the markup wires each input to a #error-* span via aria-describedby).
-     Submission is simulated here — swap the timeout block for a real
-     fetch() call to your email-handling endpoint.
+     Submission posts to FormSubmit.co (see FORM_ENDPOINT below), which
+     relays the data to the firm's inbox by email — no custom backend.
      ---------------------------------------------------------------- */
   function initContactForm() {
     const form = qs('#contactForm');
     if (!form) return;
 
+    const FORM_ENDPOINT = 'https://formsubmit.co/ajax/sergeyvlg777@yandex.ru';
+
     const successBox = qs('#formSuccess');
+    const errorBox = qs('#formError');
     const submitBtn = qs('.btn-submit', form);
     const submitLabel = qs('.btn-text', submitBtn);
 
@@ -491,40 +494,37 @@
         return;
       }
 
-      /* =================================================================
-         SUBMISSION HANDLER — client-side only, by design.
-
-         This site intentionally has no backend: form data is never sent
-         anywhere. The block below drives the full client-side experience
-         (disabled button, "Отправка…" state, focus-managed success
-         message) so the interaction is complete and testable as-is.
-
-         Integration note for whoever wires up delivery later: swap the
-         setTimeout below for a real request and keep the same
-         success/error shape, for example:
-
-           const res = await fetch('/api/contact', {
-             method: 'POST',
-             headers: { 'Content-Type': 'application/json' },
-             body: JSON.stringify(Object.fromEntries(new FormData(form))),
-           });
-           if (!res.ok) throw new Error('Request failed');
-         ================================================================= */
       const originalLabel = submitLabel ? submitLabel.textContent : '';
       submitBtn.disabled = true;
       if (submitLabel) submitLabel.textContent = 'Отправка…';
+      if (successBox) successBox.hidden = true;
+      if (errorBox) errorBox.hidden = true;
 
-      window.setTimeout(() => {
-        form.reset();
-        submitBtn.disabled = false;
-        if (submitLabel) submitLabel.textContent = originalLabel;
-
-        if (successBox) {
-          successBox.hidden = false;
-          successBox.setAttribute('tabindex', '-1');
-          successBox.focus();
-        }
-      }, 900);
+      fetch(FORM_ENDPOINT, {
+        method: 'POST',
+        headers: { Accept: 'application/json' },
+        body: new FormData(form),
+      })
+        .then((res) => {
+          if (!res.ok) throw new Error('Request failed');
+          form.reset();
+          if (successBox) {
+            successBox.hidden = false;
+            successBox.setAttribute('tabindex', '-1');
+            successBox.focus();
+          }
+        })
+        .catch(() => {
+          if (errorBox) {
+            errorBox.hidden = false;
+            errorBox.setAttribute('tabindex', '-1');
+            errorBox.focus();
+          }
+        })
+        .finally(() => {
+          submitBtn.disabled = false;
+          if (submitLabel) submitLabel.textContent = originalLabel;
+        });
     });
   }
 

@@ -1253,6 +1253,16 @@ main > section { padding-block: var(--section-pad); }
   color: var(--c-navy);
 }
 
+.form-error-box {
+  grid-column: 1 / -1;
+  padding: var(--space-md);
+  background: var(--c-paper-dim);
+  border: 1px solid var(--c-error);
+  border-radius: var(--r-sm);
+  color: var(--c-navy);
+}
+.form-error-box a { color: var(--c-error); border-bottom: 1px solid var(--c-error); }
+
 /* ---------------------------------------------------------------------------
    15. FOOTER
    ------------------------------------------------------------------------ */
