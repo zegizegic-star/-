@@ -573,6 +573,37 @@
   }
 
   /* -------------------------------------------------------------------
+     SERVICE QUICK-SELECT
+     Links tagged data-service (case cards, pricing CTAs) jump to the
+     contact form and pre-select the matching option, so a visitor
+     doesn't have to re-describe what they already told us by clicking.
+     ---------------------------------------------------------------- */
+  function initServiceQuickSelect() {
+    const triggers = qsa('[data-service]');
+    const select = qs('#service');
+    if (!triggers.length || !select) return;
+
+    triggers.forEach((trigger) => {
+      trigger.addEventListener('click', () => {
+        const value = trigger.dataset.service;
+        if (!value || !qs(`option[value="${value}"]`, select)) return;
+
+        select.value = value;
+        select.classList.remove('field-highlight');
+        // Force reflow so re-adding the class restarts the animation
+        // even if the same service is picked twice in a row.
+        void select.offsetWidth;
+        select.classList.add('field-highlight');
+        select.addEventListener(
+          'animationend',
+          () => select.classList.remove('field-highlight'),
+          { once: true }
+        );
+      });
+    });
+  }
+
+  /* -------------------------------------------------------------------
      INIT
      ---------------------------------------------------------------- */
   document.addEventListener('DOMContentLoaded', () => {
@@ -586,6 +617,7 @@
     initRippleEffect();
     initLazyLoading();
     initContactForm();
+    initServiceQuickSelect();
     initFooterYear();
     initMobileCta();
   });
