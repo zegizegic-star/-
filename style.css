@@ -642,6 +642,8 @@ main > section { padding-block: var(--section-pad); }
   font-size: var(--fs-small);
   color: var(--c-muted);
 }
+.hero-note a { color: var(--c-navy); text-decoration: underline; text-underline-offset: 2px; }
+.hero-note a:hover { color: var(--c-gold-dark); }
 .hero-note-dot {
   width: 6px; height: 6px;
   border-radius: 50%;
@@ -1189,6 +1191,22 @@ main > section { padding-block: var(--section-pad); }
   transition: color var(--t-fast);
 }
 .contact-email a:hover { color: var(--c-gold-dark); }
+
+.contact-urgent {
+  margin-top: var(--space-lg);
+  padding: var(--space-sm) var(--space-md);
+  background: var(--c-white);
+  border: 1px solid var(--c-line);
+  border-radius: var(--r-md);
+}
+.contact-urgent-label {
+  font-size: var(--fs-small);
+  color: var(--c-muted);
+  margin-bottom: var(--space-2xs);
+}
+.btn-telegram { border-color: #2AABEE; color: #1C7FB5; }
+.btn-telegram::before { background: #2AABEE; }
+.btn-telegram:hover { color: var(--c-white); }
 
 .contact-form {
   background: var(--c-white);
