@@ -741,6 +741,7 @@ main > section { padding-block: var(--section-pad); }
 .stats-list {
   display: grid;
   gap: var(--space-md);
+  max-width: 32rem;
   border-top: 1px solid rgba(255,255,255,0.15);
   padding-top: var(--space-md);
 }
@@ -909,6 +910,7 @@ main > section { padding-block: var(--section-pad); }
   display: flex;
   flex-direction: column;
   gap: var(--space-lg);
+  max-width: 60rem;
 }
 .process-list::before {
   content: '';
