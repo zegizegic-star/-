@@ -846,8 +846,21 @@ main > section { padding-block: var(--section-pad); }
 
 .why-quote {
   margin-top: var(--space-lg);
-  padding-left: var(--space-md);
+  display: flex;
+  gap: var(--space-md);
+  align-items: flex-start;
+}
+.why-quote-portrait {
+  width: 130px;
+  height: 156px;
+  object-fit: cover;
+  border-radius: var(--r-md);
+  flex-shrink: 0;
+  box-shadow: var(--shadow-md);
+}
+.why-quote-content {
   border-left: 2px solid var(--c-gold);
+  padding-left: var(--space-md);
 }
 .why-quote p {
   font-family: var(--f-display);
@@ -861,14 +874,6 @@ main > section { padding-block: var(--section-pad); }
   display: flex;
   align-items: center;
   gap: var(--space-sm);
-}
-.why-quote-photo {
-  width: 56px;
-  height: 56px;
-  border-radius: 50%;
-  object-fit: cover;
-  flex-shrink: 0;
-  border: 1px solid var(--c-line);
 }
 .why-quote cite {
   font-style: normal;
