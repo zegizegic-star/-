@@ -576,18 +576,34 @@
   function initMobileCta() {
     const bar = qs('.mobile-cta');
     const contactSection = qs('#contact');
+    const footer = qs('.site-footer');
     if (!bar || !contactSection) return;
 
-    const observer = new IntersectionObserver(
-      (entries) => {
-        entries.forEach((entry) => {
-          bar.classList.toggle('is-hidden', entry.isIntersecting);
-        });
+    // Hidden while the contact form itself is in view (no need for the
+    // shortcut right above the real form), and hidden again for the
+    // footer so the fixed bar never sits over the legal links at the
+    // very bottom of the page.
+    const state = { contact: false, footer: false };
+    const applyState = () => {
+      bar.classList.toggle('is-hidden', state.contact || state.footer);
+    };
+
+    const contactObserver = new IntersectionObserver(
+      ([entry]) => {
+        state.contact = entry.isIntersecting;
+        applyState();
       },
       { rootMargin: '0px 0px -40% 0px' }
     );
+    contactObserver.observe(contactSection);
 
-    observer.observe(contactSection);
+    if (footer) {
+      const footerObserver = new IntersectionObserver(([entry]) => {
+        state.footer = entry.isIntersecting;
+        applyState();
+      });
+      footerObserver.observe(footer);
+    }
   }
 
   /* -------------------------------------------------------------------
