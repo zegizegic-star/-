@@ -764,51 +764,52 @@ main > section { padding-block: var(--section-pad); }
 /* ---------------------------------------------------------------------------
    8. SERVICES
    ------------------------------------------------------------------------ */
-.services-list { display: flex; flex-direction: column; }
-
-.service-row {
-  position: relative;
+.services-grid {
   display: grid;
-  grid-template-columns: 4rem 1fr;
-  gap: var(--space-xs) var(--space-md);
-  padding-block: var(--space-lg);
-  padding-inline: var(--space-xs);
-  margin-inline: calc(var(--space-xs) * -1);
-  border-top: 1px solid var(--c-line);
-  border-radius: var(--r-sm);
-  transition: padding-inline-start var(--t-med), background-color var(--t-med);
-}
-.services-list li:last-child { border-bottom: 1px solid var(--c-line); }
-
-.service-row:hover {
-  padding-inline-start: var(--space-md);
-  background: linear-gradient(90deg, rgba(212, 175, 55, 0.07), transparent 65%);
+  grid-template-columns: 1fr;
+  gap: var(--space-md);
 }
 
-.service-row-index {
+.service-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  padding: var(--space-lg) var(--space-md);
+  background: var(--c-white);
+  border: 1px solid var(--c-line-soft);
+  border-radius: var(--r-md);
+  transition: transform var(--t-fast), box-shadow var(--t-fast), border-color var(--t-fast);
+}
+.service-card:hover {
+  transform: translateY(-4px);
+  box-shadow: var(--shadow-sm);
+  border-color: var(--c-gold-light);
+}
+
+.service-card-index {
   font-family: var(--f-display);
   font-size: clamp(1.4rem, 1.2rem + 0.8vw, 1.9rem);
   color: var(--c-gold);
   line-height: 1;
+  margin-bottom: var(--space-sm);
   transition: color var(--t-med);
 }
-.service-row:hover .service-row-index { color: var(--c-gold-dark); }
-.service-row-body h3 { font-size: var(--fs-h3); margin-bottom: var(--space-2xs); }
-.service-row-body p { color: var(--c-muted); max-width: 52rem; }
+.service-card:hover .service-card-index { color: var(--c-gold-dark); }
 
-.service-row-link {
+.service-card h3 { font-size: var(--fs-h3); margin-bottom: var(--space-2xs); }
+.service-card p { color: var(--c-muted); flex-grow: 1; margin-bottom: var(--space-md); }
+
+.service-card-link {
   position: relative;
   display: inline-flex;
-  align-self: start;
+  align-self: flex-start;
   align-items: center;
   gap: 0.4em;
-  grid-column: 2;
-  margin-top: var(--space-xs);
   font-size: var(--fs-small);
   font-weight: 600;
   color: var(--c-navy);
 }
-.service-row-link::after {
+.service-card-link::after {
   content: '';
   position: absolute;
   left: 0; right: 100%;
@@ -817,9 +818,9 @@ main > section { padding-block: var(--section-pad); }
   background: currentColor;
   transition: right var(--t-med);
 }
-.service-row:hover .service-row-link::after { right: 0; }
-.service-row-link span { transition: transform var(--t-fast); }
-.service-row:hover .service-row-link span { transform: translateX(4px); }
+.service-card:hover .service-card-link::after { right: 0; }
+.service-card-link span { transition: transform var(--t-fast); }
+.service-card:hover .service-card-link span { transform: translateX(4px); }
 
 /* ---------------------------------------------------------------------------
    9. WHY US
@@ -1433,6 +1434,7 @@ main > section { padding-block: var(--section-pad); }
    ------------------------------------------------------------------------ */
 @media (min-width: 720px) {
   .why-features { grid-template-columns: repeat(2, 1fr); }
+  .services-grid { grid-template-columns: repeat(2, 1fr); }
   .cases-grid { grid-template-columns: repeat(2, 1fr); }
   .pricing-grid { grid-template-columns: repeat(2, 1fr); }
   .price-card--featured { grid-column: span 2; }
@@ -1468,12 +1470,7 @@ main > section { padding-block: var(--section-pad); }
   .stats-feature { grid-template-columns: 1fr 1.3fr; align-items: center; }
   .stats-list { border-top: none; padding-top: 0; border-left: 1px solid rgba(255,255,255,0.15); padding-left: var(--space-lg); }
 
-  .service-row {
-    grid-template-columns: 4rem 1fr auto;
-    align-items: start;
-  }
-  .service-row-link { grid-column: 3; margin-top: 0; align-self: center; }
-  .service-row-body p { max-width: 46ch; }
+  .services-grid { grid-template-columns: repeat(3, 1fr); }
 
   .why-grid { grid-template-columns: 1fr 1fr; }
   .why-quote { grid-column: 1 / -1; max-width: 44rem; }
