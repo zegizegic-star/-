@@ -1897,8 +1897,8 @@ main > section { padding-block: var(--section-pad); }
   margin-bottom: var(--space-xs);
 }
 .legal-page p { color: var(--c-muted); margin-bottom: var(--space-xs); }
-.legal-page a { color: var(--c-gold-dark); border-bottom: 1px solid var(--c-gold); }
-.legal-page a:hover { color: var(--c-navy); }
+.legal-page a:not(.btn) { color: var(--c-gold-dark); border-bottom: 1px solid var(--c-gold); }
+.legal-page a:not(.btn):hover { color: var(--c-navy); }
 .legal-back { margin-top: var(--space-xl); }
 
 /* ---------------------------------------------------------------------------
