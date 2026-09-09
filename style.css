@@ -1035,16 +1035,8 @@ main > section { padding-block: var(--section-pad); }
   font-size: clamp(2rem, 1.7rem + 1vw, 2.6rem);
   color: var(--c-navy);
 }
-.price-original {
-  font-family: var(--f-body);
-  font-size: 1rem;
-  font-weight: 500;
-  color: var(--c-muted);
-  text-decoration: line-through;
-  text-decoration-color: var(--c-gold-dark);
-}
-.price-card--featured .price-original { color: rgba(255,255,255,0.5); }
 .price-desc { color: var(--c-muted); font-size: var(--fs-small); margin-top: 0.3rem; margin-bottom: var(--space-md); }
+.price-value + .price-features { margin-top: var(--space-md); }
 
 .price-features { display: flex; flex-direction: column; gap: 0.7rem; margin-bottom: var(--space-lg); flex-grow: 1; }
 .price-features li {
