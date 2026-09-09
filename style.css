@@ -610,12 +610,12 @@ main > section { padding-block: var(--section-pad); }
 .hero-headline {
   position: relative;
   z-index: 1;
-  max-width: 34rem;
+  max-width: 36rem;
 }
 
 .hero-headline h1 {
   margin-bottom: 0;
-  font-size: var(--fs-h1);
+  font-size: clamp(2.9rem, 1.9rem + 4.6vw, 6.75rem);
   letter-spacing: -0.02em;
 }
 
@@ -1000,8 +1000,10 @@ main > section { padding-block: var(--section-pad); }
   position: absolute;
   inset: 0;
   z-index: 0;
-  background-image: radial-gradient(rgba(255, 255, 255, 0.05) 1px, transparent 1px);
-  background-size: 24px 24px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  background-size: 160px 160px;
+  opacity: 0.07;
+  mix-blend-mode: overlay;
   pointer-events: none;
 }
 .cases .container { position: relative; z-index: 1; }
@@ -1101,17 +1103,28 @@ main > section { padding-block: var(--section-pad); }
 .price-features li::before {
   content: '';
   position: absolute;
-  left: 0; top: 0.5em;
-  width: 8px; height: 8px;
-  border-radius: 50%;
-  background: var(--c-gold);
+  left: 2px; top: 0.55em;
+  width: 6px; height: 6px;
+  border: 1.5px solid var(--c-gold);
+  transform: rotate(45deg);
 }
 
 .price-card--featured {
+  position: relative;
   background: var(--g-navy);
   border-color: transparent;
   color: var(--c-white);
   box-shadow: var(--shadow-lg);
+}
+.price-card--featured::after {
+  content: '';
+  position: absolute;
+  top: var(--space-md);
+  right: var(--space-md);
+  width: 12px;
+  height: 12px;
+  border: 1.5px solid var(--c-gold);
+  transform: rotate(45deg);
 }
 .price-card--featured h3,
 .price-card--featured .price-value { color: var(--c-white); }
