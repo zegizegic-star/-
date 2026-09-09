@@ -937,6 +937,7 @@ main > section { padding-block: var(--section-pad); }
 }
 .why-quote-name { font-weight: 600; color: var(--c-navy); }
 .why-quote-role { color: var(--c-muted); }
+.why-quote-credential { color: var(--c-muted); opacity: 0.75; font-size: 0.82rem; }
 
 .why-features {
   display: grid;
