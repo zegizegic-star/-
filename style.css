@@ -558,6 +558,8 @@ main > section { padding-block: var(--section-pad); }
   display: flex;
   flex-direction: column;
   justify-content: space-between;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
   transform: translateX(100%);
   transition: transform var(--t-med);
 }
