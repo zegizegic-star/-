@@ -1271,9 +1271,6 @@ main > section { padding-block: var(--section-pad); }
   color: var(--c-muted);
   margin-bottom: var(--space-2xs);
 }
-.btn-telegram { border-color: #2AABEE; color: #1C7FB5; }
-.btn-telegram::before { background: #2AABEE; }
-.btn-telegram:hover { color: var(--c-white); }
 
 .contact-form {
   background: var(--c-white);
