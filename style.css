@@ -1468,6 +1468,17 @@ main > section { padding-block: var(--section-pad); }
   margin-bottom: 0.2em;
 }
 .diagnostic-calc-caption { color: var(--c-muted); margin-bottom: var(--space-sm); }
+.diagnostic-calc-compare {
+  padding: 0.7em 1em;
+  margin-bottom: var(--space-md);
+  background: var(--c-paper-dim);
+  border-left: 2px solid var(--c-gold);
+  border-radius: var(--r-sm);
+  color: var(--c-navy);
+  font-weight: 600;
+  font-size: var(--fs-small);
+  max-width: 50ch;
+}
 .diagnostic-calc-note {
   font-size: var(--fs-small);
   color: var(--c-muted);

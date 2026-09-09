@@ -851,6 +851,12 @@
     const calcDays = qs('#calcDays', section);
     const calcResult = qs('#calcResult', section);
     const calcLoss = qs('#calcLoss', section);
+    const calcCompare = qs('#calcCompare', section);
+
+    // Real price already listed above in #pricing — turns the raw
+    // number into an actual decision ("stop the loss" vs "eat it")
+    // instead of just displaying a product of two inputs.
+    const BASE_PACKAGE_PRICE = 20000;
 
     function updateCalc() {
       if (!calcRevenue || !calcDays || !calcResult || !calcLoss) return;
@@ -862,6 +868,18 @@
       }
       const loss = Math.round(revenue * days);
       calcLoss.textContent = loss.toLocaleString('ru-RU') + ' ₽';
+
+      if (calcCompare) {
+        const ratio = loss / BASE_PACKAGE_PRICE;
+        if (ratio >= 1.5) {
+          calcCompare.textContent = 'Это заметно больше стоимости пакета «Базовая защита» (20 000 ₽) — который решает именно эту проблему.';
+        } else if (ratio >= 0.7) {
+          calcCompare.textContent = 'Это уже сопоставимо со стоимостью пакета «Базовая защита» (20 000 ₽), который решает именно эту проблему.';
+        } else {
+          calcCompare.textContent = 'Пока это меньше стоимости пакета «Базовая защита» (20 000 ₽) — но обычно блокировка тянется дольше, если её не остановить.';
+        }
+      }
+
       calcResult.hidden = false;
     }
     if (calcRevenue) calcRevenue.addEventListener('input', updateCalc);
