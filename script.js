@@ -848,9 +848,12 @@
 
     // Calculator
     const calcRevenue = qs('#calcRevenue', section);
+    const calcMargin = qs('#calcMargin', section);
     const calcDays = qs('#calcDays', section);
+    const calcFixed = qs('#calcFixed', section);
     const calcResult = qs('#calcResult', section);
     const calcLoss = qs('#calcLoss', section);
+    const calcCaption = qs('#calcCaption', section);
     const calcCompare = qs('#calcCompare', section);
 
     // Real price already listed above in #pricing — turns the raw
@@ -859,15 +862,31 @@
     const BASE_PACKAGE_PRICE = 20000;
 
     function updateCalc() {
-      if (!calcRevenue || !calcDays || !calcResult || !calcLoss) return;
+      if (!calcRevenue || !calcMargin || !calcDays || !calcResult || !calcLoss) return;
       const revenue = parseFloat(calcRevenue.value);
+      const margin = parseFloat(calcMargin.value);
       const days = parseFloat(calcDays.value);
-      if (!revenue || !days || revenue <= 0 || days <= 0) {
+      const fixedPerDay = parseFloat(calcFixed ? calcFixed.value : '') || 0;
+
+      if (!revenue || !margin || !days || revenue <= 0 || margin <= 0 || days <= 0) {
         calcResult.hidden = true;
         return;
       }
-      const loss = Math.round(revenue * days);
+
+      // Loss isn't the full revenue — without sales, money also isn't
+      // spent on stock/logistics for those sales. What's actually lost
+      // is the profit on them, plus whatever keeps costing money
+      // regardless (storage, ads, staff).
+      const lostProfit = revenue * (margin / 100) * days;
+      const ongoingCosts = fixedPerDay * days;
+      const loss = Math.round(lostProfit + ongoingCosts);
       calcLoss.textContent = loss.toLocaleString('ru-RU') + ' ₽';
+
+      if (calcCaption) {
+        calcCaption.textContent = ongoingCosts > 0
+          ? 'недополученной прибыли и расходов, которые продолжаются, за указанный период'
+          : 'недополученной прибыли за указанный период';
+      }
 
       if (calcCompare) {
         const ratio = loss / BASE_PACKAGE_PRICE;
@@ -882,8 +901,9 @@
 
       calcResult.hidden = false;
     }
-    if (calcRevenue) calcRevenue.addEventListener('input', updateCalc);
-    if (calcDays) calcDays.addEventListener('input', updateCalc);
+    [calcRevenue, calcMargin, calcDays, calcFixed].forEach((el) => {
+      if (el) el.addEventListener('input', updateCalc);
+    });
   }
 
   /* -------------------------------------------------------------------

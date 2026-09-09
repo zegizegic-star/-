@@ -764,15 +764,23 @@
                 <input type="number" id="calcRevenue" inputmode="numeric" min="0" step="500" placeholder="Например, 15000">
               </div>
               <div class="diagnostic-calc-field">
+                <label for="calcMargin">Ваша маржа с продажи, %</label>
+                <input type="number" id="calcMargin" inputmode="numeric" min="1" max="100" step="1" value="30">
+              </div>
+              <div class="diagnostic-calc-field">
                 <label for="calcDays">Сколько дней длится блокировка</label>
                 <input type="number" id="calcDays" inputmode="numeric" min="1" step="1" placeholder="Например, 7">
+              </div>
+              <div class="diagnostic-calc-field">
+                <label for="calcFixed">Расходы в день, которые продолжаются несмотря на блокировку — склад, реклама, зарплата <span class="optional">(необязательно)</span></label>
+                <input type="number" id="calcFixed" inputmode="numeric" min="0" step="100" placeholder="Например, 500">
               </div>
             </div>
             <div class="diagnostic-calc-result" id="calcResult" hidden>
               <p class="diagnostic-calc-figure" id="calcLoss">0 ₽</p>
-              <p class="diagnostic-calc-caption">примерно упущенной выручки за указанный период</p>
+              <p class="diagnostic-calc-caption" id="calcCaption">недополученной прибыли за указанный период</p>
               <p class="diagnostic-calc-compare" id="calcCompare"></p>
-              <p class="diagnostic-calc-note">Расчёт приблизительный и не учитывает возможную потерю позиций в поиске и рейтинга карточки после снятия блокировки — обычно это дополнительные потери.</p>
+              <p class="diagnostic-calc-note">Расчёт приблизительный: считает недополученную прибыль (не всю выручку — ведь без продаж не тратится и на закупку) плюс расходы, которые продолжаются несмотря на блокировку. Не учитывает возможную потерю позиций в поиске и рейтинга карточки после снятия блокировки — обычно это дополнительные потери.</p>
               <a href="#contact" class="btn btn-outline" data-service="blocking-defense">Узнать, как снять блокировку →</a>
             </div>
           </div>
