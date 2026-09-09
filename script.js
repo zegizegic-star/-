@@ -156,9 +156,17 @@
 
         event.preventDefault();
 
-        const headerOffset = header ? header.offsetHeight : 0;
-        const top =
-          target.getBoundingClientRect().top + window.pageYOffset - headerOffset - 12;
+        // The header itself is the "#top" anchor and is sticky, so its
+        // getBoundingClientRect().top reads 0 once stuck — applying the
+        // usual header-offset compensation would land short of the real
+        // top of the page. Scroll straight to 0 for that case.
+        let top;
+        if (target === header) {
+          top = 0;
+        } else {
+          const headerOffset = header ? header.offsetHeight : 0;
+          top = target.getBoundingClientRect().top + window.pageYOffset - headerOffset - 12;
+        }
 
         window.scrollTo({
           top,
