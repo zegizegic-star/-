@@ -1638,6 +1638,22 @@ main > section { padding-block: var(--section-pad); }
 .article-cta-label { font-weight: 600; color: var(--c-navy); margin-bottom: var(--space-sm); }
 .article-cta-actions { display: flex; flex-wrap: wrap; gap: var(--space-sm); }
 
+.article-download {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-md);
+  margin: var(--space-lg) 0;
+  padding: var(--space-md) var(--space-lg);
+  background: var(--c-white);
+  border: 1px solid var(--c-gold-light);
+  border-radius: var(--r-md);
+}
+.article-download-title { font-weight: 700; color: var(--c-navy); margin-bottom: 0.2rem; }
+.article-download-text { color: var(--c-muted); font-size: var(--fs-small); margin: 0; max-width: 34rem; }
+.article-download .btn { flex-shrink: 0; }
+
 /* Blog index */
 .blog-index-inner { max-width: 56rem; }
 .blog-list {
