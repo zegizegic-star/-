@@ -482,10 +482,8 @@ main > section { padding-block: var(--section-pad); }
 .main-nav { display: none; }
 .main-nav ul { display: flex; gap: 1.85rem; }
 
-/* Temporary header placeholder mark: quiet + slightly smaller than the standard mark size */
 .logo-mark--subtle { width: 28px; height: 28px; }
 
-/* Temporary descriptor next to the placeholder mark — not a final brand identity */
 .logo-descriptor {
   font-family: var(--f-body);
   font-size: 0.6rem;
