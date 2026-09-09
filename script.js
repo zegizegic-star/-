@@ -466,15 +466,28 @@
         validate: (v) =>
           v.trim().length >= 10 ? '' : 'Опишите задачу подробнее — от 10 символов.',
       },
+      consent: {
+        el: form.elements.consent,
+        error: qs('#error-consent'),
+        getValue: (el) => el.checked,
+        validate: (checked) => (checked ? '' : 'Необходимо дать согласие на обработку персональных данных.'),
+      },
     };
 
     // Validate on blur so errors appear as the person moves through the
-    // form, not all at once on submit.
-    Object.values(fields).forEach(({ el, error, validate }) => {
+    // form, not all at once on submit. Checkboxes also validate on change
+    // so the error clears the moment they're checked, not only on blur.
+    Object.values(fields).forEach(({ el, error, validate, getValue }) => {
       if (!el || !error) return;
+      const readValue = () => (getValue ? getValue(el) : el.value);
       el.addEventListener('blur', () => {
-        error.textContent = validate(el.value);
+        error.textContent = validate(readValue());
       });
+      if (el.type === 'checkbox') {
+        el.addEventListener('change', () => {
+          error.textContent = validate(readValue());
+        });
+      }
     });
 
     form.addEventListener('submit', (event) => {
@@ -482,9 +495,9 @@
 
       let firstInvalidField = null;
 
-      Object.values(fields).forEach(({ el, error, validate }) => {
+      Object.values(fields).forEach(({ el, error, validate, getValue }) => {
         if (!el || !error) return;
-        const message = validate(el.value);
+        const message = validate(getValue ? getValue(el) : el.value);
         error.textContent = message;
         if (message && !firstInvalidField) firstInvalidField = el;
       });
