@@ -639,6 +639,34 @@
   }
 
   /* -------------------------------------------------------------------
+     12b. READING PROGRESS
+     Fills the thin bar at the top of long article pages as the reader
+     scrolls through the article body specifically (not the whole page,
+     header/footer included) — no-ops on pages without .legal-page.
+     ---------------------------------------------------------------- */
+  function initReadingProgress() {
+    const bar = qs('#readingProgressBar');
+    const article = qs('.legal-page-inner');
+    if (!bar || !article) return;
+
+    const update = () => {
+      const rect = article.getBoundingClientRect();
+      const articleTop = rect.top + window.scrollY;
+      const total = article.offsetHeight - window.innerHeight;
+      if (total <= 0) {
+        bar.style.width = '100%';
+        return;
+      }
+      const progress = (window.scrollY - articleTop) / total;
+      bar.style.width = `${Math.min(100, Math.max(0, progress * 100))}%`;
+    };
+
+    update();
+    window.addEventListener('scroll', update, { passive: true });
+    window.addEventListener('resize', debounce(update, 200));
+  }
+
+  /* -------------------------------------------------------------------
      SERVICE QUICK-SELECT
      Links tagged data-service (case cards, pricing CTAs) jump to the
      contact form and pre-select the matching option, so a visitor
@@ -860,5 +888,6 @@
     initDiagnosticTool();
     initFooterYear();
     initMobileCta();
+    initReadingProgress();
   });
 })();

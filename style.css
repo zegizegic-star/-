@@ -817,11 +817,12 @@ main > section { padding-block: var(--section-pad); }
   background: var(--c-white);
   border: 1px solid var(--c-line-soft);
   border-radius: var(--r-md);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.7), var(--shadow-xs);
   transition: transform var(--t-fast), box-shadow var(--t-fast), border-color var(--t-fast);
 }
 .service-card:hover {
   transform: translateY(-4px);
-  box-shadow: var(--shadow-sm);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.7), var(--shadow-sm);
   border-color: var(--c-gold-light);
 }
 
@@ -953,9 +954,10 @@ main > section { padding-block: var(--section-pad); }
   background: var(--c-white);
   border-radius: var(--r-md);
   border: 1px solid var(--c-line-soft);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.7), var(--shadow-xs);
   transition: transform var(--t-fast), box-shadow var(--t-fast), border-color var(--t-fast);
 }
-.why-feature:hover { transform: translateY(-4px); box-shadow: var(--shadow-sm); border-color: var(--c-gold-light); }
+.why-feature:hover { transform: translateY(-4px); box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.7), var(--shadow-sm); border-color: var(--c-gold-light); }
 .why-feature h3 { font-size: 1.05rem; margin-bottom: 0.4rem; }
 .why-feature p { color: var(--c-muted); font-size: var(--fs-small); }
 
@@ -1106,9 +1108,10 @@ main > section { padding-block: var(--section-pad); }
   border-radius: var(--r-md);
   display: flex;
   flex-direction: column;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.7), var(--shadow-xs);
   transition: transform var(--t-med), box-shadow var(--t-med), border-color var(--t-med);
 }
-.price-card:hover { transform: translateY(-6px); box-shadow: var(--shadow-md); border-color: var(--c-gold-light); }
+.price-card:hover { transform: translateY(-6px); box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.7), var(--shadow-md); border-color: var(--c-gold-light); }
 
 .price-card h3 { font-size: var(--fs-h3); margin-bottom: var(--space-2xs); }
 .price-description { color: var(--c-muted); font-size: var(--fs-small); margin-bottom: var(--space-sm); }
@@ -1833,6 +1836,31 @@ main > section { padding-block: var(--section-pad); }
 @media (min-width: 1024px) {
   .mobile-cta { display: none; }
 }
+/* ---------------------------------------------------------------------------
+   21b. READING PROGRESS BAR
+   Thin fixed bar at the very top of long article pages, filled by
+   script.js as the reader scrolls through the article body. Sits
+   above the sticky header so it stays visible at any scroll position.
+   ------------------------------------------------------------------------ */
+.reading-progress {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  z-index: 201;
+  pointer-events: none;
+}
+.reading-progress-bar {
+  display: block;
+  height: 100%;
+  width: 0%;
+  background: var(--g-gold);
+}
+@media (prefers-reduced-motion: no-preference) {
+  .reading-progress-bar { transition: width 0.1s linear; }
+}
+
 /* ---------------------------------------------------------------------------
    22. STANDALONE PAGES — 404 & legal documents
    ------------------------------------------------------------------------ */
