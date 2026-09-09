@@ -205,7 +205,7 @@
   --space-md: clamp(1.75rem, 1.5rem + 1vw, 2.5rem);
   --space-lg: clamp(2.75rem, 2rem + 3.2vw, 4.75rem);
   --space-xl: clamp(3.75rem, 2.6rem + 4.8vw, 7rem);
-  --section-pad: clamp(5rem, 4rem + 4.5vw, 9.5rem);
+  --section-pad: clamp(3rem, 2.4rem + 3vw, 6rem);
 
   /* Shape */
   --r-sm: 10px;
@@ -1450,7 +1450,7 @@ main > section { padding-block: var(--section-pad); }
   }
   .process-time { grid-column: 3; justify-self: end; }
 
-  .cases-grid { grid-template-columns: repeat(3, 1fr); }
+  .cases-grid { grid-template-columns: repeat(2, 1fr); }
   .pricing-grid { grid-template-columns: repeat(3, 1fr); }
   .price-card--featured {
     grid-column: auto;
