@@ -938,6 +938,25 @@
   }
 
   /* -------------------------------------------------------------------
+     16. INLINE GLOSSARY
+     Click-to-reveal definitions for legal terms inside article text.
+     No-ops safely on pages without .gloss-term (everything but the
+     3 long articles).
+     ---------------------------------------------------------------- */
+  function initGlossary() {
+    const terms = qsa('.gloss-term');
+    terms.forEach((btn) => {
+      const defEl = document.getElementById(btn.getAttribute('aria-controls'));
+      if (!defEl) return;
+      btn.addEventListener('click', () => {
+        const isOpen = btn.getAttribute('aria-expanded') === 'true';
+        btn.setAttribute('aria-expanded', String(!isOpen));
+        defEl.hidden = isOpen;
+      });
+    });
+  }
+
+  /* -------------------------------------------------------------------
      INIT
      ---------------------------------------------------------------- */
   document.addEventListener('DOMContentLoaded', () => {
@@ -956,6 +975,7 @@
     initServiceQuickSelect();
     initDiagnosticTool();
     initProcessMap();
+    initGlossary();
     initFooterYear();
     initMobileCta();
     initReadingProgress();

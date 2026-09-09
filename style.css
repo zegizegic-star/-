@@ -1955,6 +1955,35 @@ main > section { padding-block: var(--section-pad); }
 .article-inner ol.article-steps li { margin-bottom: var(--space-xs); padding-left: 0.3em; }
 .article-inner ol.article-steps li strong { color: var(--c-navy); }
 
+/* Inline glossary term — a click-to-reveal definition for legal terms
+   used in the article, styled as a disclosure button (like the FAQ)
+   rather than a hover tooltip, so it works identically on touch. */
+.gloss-term {
+  display: inline;
+  padding: 0;
+  border: none;
+  background: none;
+  font: inherit;
+  color: inherit;
+  border-bottom: 1px dotted var(--c-gold-dark);
+  cursor: pointer;
+}
+.gloss-term:hover,
+.gloss-term[aria-expanded="true"] {
+  border-bottom-style: solid;
+  color: var(--c-gold-dark);
+}
+.gloss-def:not([hidden]) {
+  display: block;
+  margin: 0.6em 0;
+  padding: 0.7em 1em;
+  background: var(--c-paper-dim);
+  border-left: 2px solid var(--c-gold);
+  border-radius: var(--r-sm);
+  font-size: var(--fs-small);
+  color: var(--c-navy);
+}
+
 .article-inner ul.article-related {
   list-style: none;
   padding-left: 0;
