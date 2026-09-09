@@ -945,6 +945,9 @@ main > section { padding-block: var(--section-pad); }
   align-content: start;
 }
 .why-feature {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
   padding: var(--space-md);
   background: var(--c-white);
   border-radius: var(--r-md);
