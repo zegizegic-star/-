@@ -1278,6 +1278,157 @@ main > section { padding-block: var(--section-pad); }
 }
 
 /* ---------------------------------------------------------------------------
+   13a. QUICK DIAGNOSTIC
+   Two small self-service tools — an urgency quiz and a rough loss
+   calculator — let a visitor size up their situation before writing in.
+   Everything runs client-side; nothing is collected or sent anywhere.
+   ------------------------------------------------------------------------ */
+.diagnostic-panel {
+  max-width: 640px;
+  margin-inline: auto;
+  background: var(--c-white);
+  border: 1px solid var(--c-line);
+  border-radius: var(--r-lg);
+  box-shadow: var(--shadow-sm);
+  overflow: hidden;
+}
+
+.diagnostic-tabs {
+  display: flex;
+  border-bottom: 1px solid var(--c-line);
+}
+.diagnostic-tab {
+  flex: 1;
+  padding: var(--space-sm);
+  font-size: var(--fs-small);
+  font-weight: 600;
+  color: var(--c-muted);
+  background: var(--c-paper-dim);
+  border-bottom: 2px solid transparent;
+  transition: color var(--t-fast), background var(--t-fast), border-color var(--t-fast);
+}
+.diagnostic-tab.is-active {
+  color: var(--c-navy);
+  background: var(--c-white);
+  border-bottom-color: var(--c-gold);
+}
+
+.diagnostic-body { padding: var(--space-lg) var(--space-md); }
+
+.diagnostic-question {
+  font-family: var(--f-display);
+  font-size: 1.15rem;
+  color: var(--c-navy);
+  margin-bottom: var(--space-md);
+}
+
+.diagnostic-options {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+.diagnostic-option {
+  text-align: left;
+  padding: 0.9em 1.1em;
+  border: 1px solid var(--c-line);
+  border-radius: var(--r-sm);
+  background: var(--c-paper);
+  font-size: 0.95rem;
+  color: var(--c-navy);
+  transition: border-color var(--t-fast), background var(--t-fast), transform var(--t-fast);
+}
+.diagnostic-option:hover {
+  border-color: var(--c-gold);
+  background: var(--c-white);
+  transform: translateX(2px);
+}
+
+.diagnostic-back {
+  margin-top: var(--space-md);
+  font-size: var(--fs-small);
+  color: var(--c-muted);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.diagnostic-back:hover { color: var(--c-gold-dark); }
+
+.diagnostic-result-badge {
+  display: inline-block;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  padding: 0.4em 0.9em;
+  border-radius: var(--r-pill);
+  background: var(--c-paper-dim);
+  color: var(--c-muted);
+  margin-bottom: var(--space-sm);
+}
+.diagnostic-result-badge.is-urgent {
+  background: rgba(179, 69, 44, 0.1);
+  color: var(--c-error);
+}
+
+.diagnostic-result-text {
+  color: var(--c-muted);
+  margin-bottom: var(--space-md);
+  max-width: 46ch;
+}
+
+.diagnostic-result-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-md);
+}
+.diagnostic-result-actions .diagnostic-back { margin-top: 0; }
+
+.diagnostic-calc-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+}
+.diagnostic-calc-field { display: flex; flex-direction: column; gap: 0.5rem; }
+.diagnostic-calc-field label {
+  font-size: var(--fs-small);
+  font-weight: 600;
+  color: var(--c-navy);
+}
+.diagnostic-calc-field input {
+  border: 1px solid var(--c-line);
+  border-radius: var(--r-sm);
+  padding: 0.85em 1em;
+  background: var(--c-paper);
+  transition: border-color var(--t-fast), box-shadow var(--t-fast), background var(--t-fast);
+}
+.diagnostic-calc-field input:hover { border-color: var(--c-gold-light); }
+.diagnostic-calc-field input:focus {
+  outline: none;
+  border-color: var(--c-gold);
+  background: var(--c-white);
+  box-shadow: 0 0 0 4px rgba(212, 175, 55, 0.15);
+}
+
+.diagnostic-calc-result {
+  margin-top: var(--space-lg);
+  padding-top: var(--space-lg);
+  border-top: 1px solid var(--c-line);
+}
+.diagnostic-calc-figure {
+  font-family: var(--f-display);
+  font-size: 2.4rem;
+  color: var(--c-navy);
+  margin-bottom: 0.2em;
+}
+.diagnostic-calc-caption { color: var(--c-muted); margin-bottom: var(--space-sm); }
+.diagnostic-calc-note {
+  font-size: var(--fs-small);
+  color: var(--c-muted);
+  margin-bottom: var(--space-md);
+  max-width: 50ch;
+}
+
+/* ---------------------------------------------------------------------------
    14. CONTACT
    ------------------------------------------------------------------------ */
 .contact { background: var(--c-paper-dim); }

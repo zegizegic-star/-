@@ -638,6 +638,129 @@
   }
 
   /* -------------------------------------------------------------------
+     14. QUICK DIAGNOSTIC TOOL
+     Two small client-side tools — nothing is sent anywhere until the
+     visitor chooses to open the contact form: a short branching quiz
+     that gauges urgency, and a rough calculator for revenue lost per
+     day of a blocked listing. Both funnel into the contact form via
+     the existing service quick-select (data-service).
+     ---------------------------------------------------------------- */
+  function initDiagnosticTool() {
+    const section = qs('.diagnostic');
+    if (!section) return;
+
+    const tabQuiz = qs('#diagTabQuiz', section);
+    const tabCalc = qs('#diagTabCalc', section);
+    const viewQuiz = qs('#diagPanelQuiz', section);
+    const viewCalc = qs('#diagPanelCalc', section);
+
+    function activateTab(tab) {
+      const isQuiz = tab === tabQuiz;
+      tabQuiz.classList.toggle('is-active', isQuiz);
+      tabCalc.classList.toggle('is-active', !isQuiz);
+      tabQuiz.setAttribute('aria-selected', String(isQuiz));
+      tabCalc.setAttribute('aria-selected', String(!isQuiz));
+      viewQuiz.hidden = !isQuiz;
+      viewCalc.hidden = isQuiz;
+    }
+    if (tabQuiz && tabCalc) {
+      tabQuiz.addEventListener('click', () => activateTab(tabQuiz));
+      tabCalc.addEventListener('click', () => activateTab(tabCalc));
+    }
+
+    // Quiz
+    const stepSituation = qs('[data-diag-step="situation"]', section);
+    const stepTiming = qs('[data-diag-step="timing"]', section);
+    const stepResult = qs('[data-diag-step="result"]', section);
+    const resultBadge = qs('.diagnostic-result-badge', section);
+    const resultText = qs('.diagnostic-result-text', section);
+    const resultCta = qs('.diagnostic-result-cta', section);
+
+    const situationLabels = {
+      'blocking-defense': 'блокировкой карточки или кабинета',
+      'trademark-defense': 'претензией о нарушении прав',
+      litigation: 'контрафактом в чужой карточке',
+      'trademark-registration': 'регистрацией товарного знака',
+    };
+    let situation = null;
+
+    function showStep(step) {
+      [stepSituation, stepTiming, stepResult].forEach((s) => {
+        if (s) s.hidden = s !== step;
+      });
+    }
+
+    function renderResult(timing) {
+      const isUrgentCase =
+        situation === 'blocking-defense' ||
+        situation === 'trademark-defense' ||
+        situation === 'litigation';
+      const isUrgent = isUrgentCase && (timing === 'urgent' || timing === 'soon');
+
+      resultBadge.textContent = isUrgent ? 'Высокий приоритет' : 'Стандартный срок';
+      resultBadge.classList.toggle('is-urgent', isUrgent);
+
+      const about = situationLabels[situation] || 'вашей ситуацией';
+      resultText.textContent = isUrgent
+        ? `Ситуация с ${about} обычно требует быстрой реакции — каждый день промедления увеличивает риски и потери. Рекомендуем обратиться сегодня.`
+        : `По ситуации с ${about} есть время подготовиться взвешенно. Опишите детали — оценим перспективы в течение рабочего дня.`;
+
+      if (resultCta) resultCta.dataset.service = situation || '';
+      showStep(stepResult);
+    }
+
+    if (stepSituation) {
+      qsa('[data-situation]', stepSituation).forEach((btn) => {
+        btn.addEventListener('click', () => {
+          situation = btn.dataset.situation;
+          if (situation === 'trademark-registration') {
+            renderResult('calm');
+          } else {
+            showStep(stepTiming);
+          }
+        });
+      });
+    }
+    if (stepTiming) {
+      qsa('[data-timing]', stepTiming).forEach((btn) => {
+        btn.addEventListener('click', () => renderResult(btn.dataset.timing));
+      });
+      const back = qs('.diagnostic-back', stepTiming);
+      if (back) back.addEventListener('click', () => showStep(stepSituation));
+    }
+    if (stepResult) {
+      const restart = qs('.diagnostic-restart', stepResult);
+      if (restart) {
+        restart.addEventListener('click', () => {
+          situation = null;
+          showStep(stepSituation);
+        });
+      }
+    }
+
+    // Calculator
+    const calcRevenue = qs('#calcRevenue', section);
+    const calcDays = qs('#calcDays', section);
+    const calcResult = qs('#calcResult', section);
+    const calcLoss = qs('#calcLoss', section);
+
+    function updateCalc() {
+      if (!calcRevenue || !calcDays || !calcResult || !calcLoss) return;
+      const revenue = parseFloat(calcRevenue.value);
+      const days = parseFloat(calcDays.value);
+      if (!revenue || !days || revenue <= 0 || days <= 0) {
+        calcResult.hidden = true;
+        return;
+      }
+      const loss = Math.round(revenue * days);
+      calcLoss.textContent = loss.toLocaleString('ru-RU') + ' ₽';
+      calcResult.hidden = false;
+    }
+    if (calcRevenue) calcRevenue.addEventListener('input', updateCalc);
+    if (calcDays) calcDays.addEventListener('input', updateCalc);
+  }
+
+  /* -------------------------------------------------------------------
      INIT
      ---------------------------------------------------------------- */
   document.addEventListener('DOMContentLoaded', () => {
@@ -653,6 +776,7 @@
     initLazyLoading();
     initContactForm();
     initServiceQuickSelect();
+    initDiagnosticTool();
     initFooterYear();
     initMobileCta();
   });

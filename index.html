@@ -694,6 +694,77 @@
     </div>
   </section>
 
+  <!-- QUICK DIAGNOSTIC -->
+  <section class="diagnostic" id="diagnostic" aria-labelledby="diagnostic-heading">
+    <span class="section-divider" aria-hidden="true"></span>
+    <div class="container">
+      <div class="section-head">
+        <p class="eyebrow" data-reveal>Быстрая диагностика</p>
+        <h2 id="diagnostic-heading" data-reveal>Оцените ситуацию за 30 секунд</h2>
+        <p class="section-lead" data-reveal>Ответьте на пару вопросов — покажем, насколько срочно нужно действовать, и посчитаем примерные потери от блокировки.</p>
+      </div>
+
+      <div class="diagnostic-panel" data-reveal>
+        <div class="diagnostic-tabs" role="tablist" aria-label="Инструменты диагностики">
+          <button class="diagnostic-tab is-active" id="diagTabQuiz" type="button" role="tab" aria-selected="true" aria-controls="diagPanelQuiz">Оценить срочность</button>
+          <button class="diagnostic-tab" id="diagTabCalc" type="button" role="tab" aria-selected="false" aria-controls="diagPanelCalc">Посчитать потери</button>
+        </div>
+
+        <div class="diagnostic-body">
+          <div class="diagnostic-view" id="diagPanelQuiz" role="tabpanel" aria-labelledby="diagTabQuiz">
+            <div class="diagnostic-step" data-diag-step="situation">
+              <p class="diagnostic-question">Что произошло?</p>
+              <div class="diagnostic-options">
+                <button type="button" class="diagnostic-option" data-situation="blocking-defense">Блокировка карточки или кабинета</button>
+                <button type="button" class="diagnostic-option" data-situation="trademark-defense">Пришла претензия о нарушении прав</button>
+                <button type="button" class="diagnostic-option" data-situation="litigation">Обнаружен контрафакт в чужой карточке</button>
+                <button type="button" class="diagnostic-option" data-situation="trademark-registration">Хочу зарегистрировать товарный знак</button>
+              </div>
+            </div>
+
+            <div class="diagnostic-step" data-diag-step="timing" hidden>
+              <p class="diagnostic-question">Когда это произошло?</p>
+              <div class="diagnostic-options">
+                <button type="button" class="diagnostic-option" data-timing="urgent">Сегодня или вчера</button>
+                <button type="button" class="diagnostic-option" data-timing="soon">2–7 дней назад</button>
+                <button type="button" class="diagnostic-option" data-timing="calm">Больше недели назад</button>
+              </div>
+              <button type="button" class="diagnostic-back">← Назад</button>
+            </div>
+
+            <div class="diagnostic-result" data-diag-step="result" hidden>
+              <p class="diagnostic-result-badge"></p>
+              <p class="diagnostic-result-text"></p>
+              <div class="diagnostic-result-actions">
+                <a href="#contact" class="btn btn-primary diagnostic-result-cta" data-service="">Описать ситуацию →</a>
+                <button type="button" class="diagnostic-back diagnostic-restart">Пройти заново</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="diagnostic-view" id="diagPanelCalc" role="tabpanel" aria-labelledby="diagTabCalc" hidden>
+            <div class="diagnostic-calc-form">
+              <div class="diagnostic-calc-field">
+                <label for="calcRevenue">Средняя выручка карточки в день, ₽</label>
+                <input type="number" id="calcRevenue" inputmode="numeric" min="0" step="500" placeholder="Например, 15000">
+              </div>
+              <div class="diagnostic-calc-field">
+                <label for="calcDays">Сколько дней длится блокировка</label>
+                <input type="number" id="calcDays" inputmode="numeric" min="1" step="1" placeholder="Например, 7">
+              </div>
+            </div>
+            <div class="diagnostic-calc-result" id="calcResult" hidden>
+              <p class="diagnostic-calc-figure" id="calcLoss">0 ₽</p>
+              <p class="diagnostic-calc-caption">примерно упущенной выручки за указанный период</p>
+              <p class="diagnostic-calc-note">Расчёт приблизительный и не учитывает возможную потерю позиций в поиске и рейтинга карточки после снятия блокировки — обычно это дополнительные потери.</p>
+              <a href="#contact" class="btn btn-outline" data-service="blocking-defense">Узнать, как снять блокировку →</a>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
   <!-- CONTACT -->
   <section class="contact" id="contact" aria-labelledby="contact-heading">
     <div class="container contact-inner">
