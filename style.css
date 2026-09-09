@@ -842,25 +842,11 @@ main > section { padding-block: var(--section-pad); }
 }
 
 .why-quote {
-  position: relative;
   margin-top: var(--space-lg);
   padding-left: var(--space-md);
   border-left: 2px solid var(--c-gold);
 }
-.why-quote::before {
-  content: '\201C';
-  position: absolute;
-  top: -0.5rem;
-  left: calc(var(--space-md) - 0.1em);
-  font-family: var(--f-display);
-  font-size: 4.5rem;
-  line-height: 1;
-  color: var(--c-gold-light);
-  opacity: 0.55;
-  pointer-events: none;
-}
 .why-quote p {
-  position: relative;
   font-family: var(--f-display);
   font-style: italic;
   font-size: var(--fs-h3);
