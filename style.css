@@ -843,7 +843,6 @@ main > section { padding-block: var(--section-pad); }
 }
 
 .why-quote {
-  margin-top: var(--space-lg);
   display: flex;
   gap: var(--space-md);
   align-items: flex-start;
@@ -1494,6 +1493,7 @@ main > section { padding-block: var(--section-pad); }
   .service-row-body p { max-width: 46ch; }
 
   .why-grid { grid-template-columns: 1fr 1fr; }
+  .why-quote { grid-column: 1 / -1; max-width: 44rem; }
 
   .process-step {
     grid-template-columns: 3.5rem 1fr auto;
