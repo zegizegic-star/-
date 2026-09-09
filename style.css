@@ -1055,15 +1055,18 @@ main > section { padding-block: var(--section-pad); }
   align-items: baseline;
   justify-content: space-between;
   gap: var(--space-sm);
-  padding-block: 0.85rem;
+  padding: 0.85rem var(--space-2xs);
   border-top: 1px solid var(--c-line-soft);
+  border-radius: var(--r-sm);
+  transition: background var(--t-fast);
 }
+.mini-price-row:hover { background: var(--c-paper-dim); }
 .mini-price-list li:last-child { border-bottom: 1px solid var(--c-line-soft); }
 .mini-price-name { color: var(--c-ink); font-size: var(--fs-small); }
 .mini-price-value {
   flex-shrink: 0;
-  color: var(--c-muted);
-  font-style: italic;
+  color: var(--c-navy);
+  font-weight: 600;
   font-size: var(--fs-small);
   white-space: nowrap;
 }
@@ -1072,6 +1075,11 @@ main > section { padding-block: var(--section-pad); }
   color: var(--c-muted);
   font-size: 0.8rem;
   margin-top: var(--space-md);
+}
+.mini-pricing-cta {
+  display: flex;
+  justify-content: center;
+  margin-top: var(--space-lg);
 }
 
 /* ---------------------------------------------------------------------------
