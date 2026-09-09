@@ -591,27 +591,28 @@ main > section { padding-block: var(--section-pad); }
     radial-gradient(45% 40% at 8% 95%, rgba(11, 19, 32, 0.05), transparent 70%);
 }
 /* Oversized brand mark bleeding off the edge — the one "signature"
-   moment in the hero, echoing the logo at a scale nobody else uses. */
-.hero-bg::after {
-  content: '';
+   moment in the hero, echoing the logo at a scale nobody else uses.
+   An inline SVG (rather than a background-image) so its two paths can
+   be stroke-drawn in on load — see initHeroWatermarkDraw in script.js. */
+.hero-watermark {
   position: absolute;
   right: -6%;
   top: 8%;
   width: min(46vw, 600px);
   height: min(46vw, 600px);
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Cpath d='M25,20 L75,20 L75,48 C75,68 63,82 50,88 C37,82 25,68 25,48 Z' fill='none' stroke='%230B1320' stroke-width='0.6'/%3E%3Cpath d='M50,37 L61,50 L50,63 L39,50 Z' fill='none' stroke='%230B1320' stroke-width='0.5'/%3E%3C/svg%3E");
-  background-repeat: no-repeat;
-  background-size: contain;
   opacity: 0.05;
   transform: translate(var(--mx, 0px), var(--my, 0px));
   transition: transform 0.5s var(--ease);
+}
+.hero-watermark path {
+  transition: stroke-dashoffset 1.6s var(--ease);
 }
 /* Below 1024px the hero is a single stacked column with no empty area
    left for the mark to sit in without colliding with text — the hero's
    height also varies with content, so no fixed position stays clear
    reliably. Hide it rather than force it into a spot it doesn't fit. */
 @media (max-width: 1023px) {
-  .hero-bg::after {
+  .hero-watermark {
     display: none;
   }
 }
@@ -1426,6 +1427,67 @@ main > section { padding-block: var(--section-pad); }
   color: var(--c-muted);
   margin-bottom: var(--space-md);
   max-width: 50ch;
+}
+
+/* ---------------------------------------------------------------------------
+   13b. DIAGNOSTIC PRINT PLAN
+   Hidden on screen; populated by script.js from the quiz answers and
+   shown only inside the browser's print dialog (Save as PDF), so a
+   visitor can walk away with a concrete, personalized one-pager
+   instead of just a static download. Nothing is sent anywhere.
+   ------------------------------------------------------------------------ */
+.diagnostic-print-plan { display: none; }
+
+@media print {
+  body * { visibility: hidden; }
+  .diagnostic-print-plan, .diagnostic-print-plan * { visibility: visible; }
+  .diagnostic-print-plan {
+    display: block;
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    padding: 2cm;
+    font-family: var(--f-body);
+    color: #111;
+  }
+  .print-plan-eyebrow {
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: #555;
+  }
+  .print-plan-title {
+    font-family: var(--f-display);
+    font-size: 1.6rem;
+    font-weight: 600;
+    margin: 0.3em 0;
+  }
+  .print-plan-date { font-size: 0.8rem; color: #555; }
+  .print-plan-meta {
+    display: flex;
+    gap: 2.5em;
+    margin: 1.2em 0;
+  }
+  .print-plan-meta dt {
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: #555;
+  }
+  .print-plan-meta dd { font-weight: 700; margin: 0.2em 0 0; }
+  .print-plan-text { margin: 1em 0; line-height: 1.55; max-width: 60ch; }
+  .print-plan-steps h2 { font-size: 1.05rem; margin-bottom: 0.5em; }
+  .print-plan-steps ol { padding-left: 1.3em; line-height: 1.7; }
+  .print-plan-disclaimer {
+    font-size: 0.72rem;
+    color: #555;
+    margin-top: 2.5em;
+    padding-top: 1em;
+    border-top: 1px solid #ccc;
+    max-width: 60ch;
+  }
+  .print-plan-contact { margin-top: 0.8em; font-size: 0.85rem; }
 }
 
 /* ---------------------------------------------------------------------------

@@ -403,6 +403,38 @@
   }
 
   /* -------------------------------------------------------------------
+     8c. HERO WATERMARK DRAW-IN
+     The oversized brand-mark watermark strokes itself in once, shortly
+     after load, instead of just appearing — a small signature moment.
+     Skipped under reduced-motion and below 1024px (mark is hidden there).
+     ---------------------------------------------------------------- */
+  function initHeroWatermarkDraw() {
+    const paths = qsa('.hero-watermark path');
+    if (!paths.length) return;
+    if (!window.matchMedia('(min-width: 1024px)').matches) return;
+
+    if (prefersReducedMotion()) {
+      paths.forEach((path) => { path.style.strokeDashoffset = '0'; });
+      return;
+    }
+
+    paths.forEach((path, index) => {
+      const length = path.getTotalLength();
+      path.style.transition = 'none';
+      path.style.strokeDasharray = String(length);
+      path.style.strokeDashoffset = String(length);
+      // Force layout so the dashoffset above is committed before the
+      // transition below is re-enabled, otherwise browsers may collapse
+      // both into one paint and skip the animation entirely.
+      void path.getBoundingClientRect();
+      path.style.transition = '';
+      setTimeout(() => {
+        path.style.strokeDashoffset = '0';
+      }, 300 + index * 250);
+    });
+  }
+
+  /* -------------------------------------------------------------------
      9. LAZY LOADING
      Defers offscreen media until it's about to enter the viewport.
      Native `loading="lazy"` is preferred where supported; this module
@@ -682,6 +714,28 @@
       litigation: 'контрафактом в чужой карточке',
       'trademark-registration': 'регистрацией товарного знака',
     };
+    const nextSteps = {
+      'blocking-defense': [
+        'Сделайте скриншоты уведомления о блокировке и переписки с площадкой с датой и временем.',
+        'Не удаляйте и не редактируйте карточку до консультации — это может усложнить обращение.',
+        'Свяжитесь с нами для анализа причины блокировки и подготовки обращения к площадке.',
+      ],
+      'trademark-defense': [
+        'Сохраните претензию и все приложенные к ней документы.',
+        'Не признавайте нарушение и не удаляйте карточку до анализа обоснованности требований.',
+        'Свяжитесь с нами для оценки перспектив и подготовки мотивированного ответа.',
+      ],
+      litigation: [
+        'Зафиксируйте нарушение — скриншоты карточки нарушителя с датой и временем.',
+        'Соберите доказательства ваших прав на объект (свидетельство, авторство, договоры).',
+        'Свяжитесь с нами для подготовки претензии и обращения к площадке.',
+      ],
+      'trademark-registration': [
+        'Определите точный перечень товаров и услуг (классы МКТУ) для обозначения.',
+        'Проверьте обозначение на схожесть с уже зарегистрированными знаками.',
+        'Свяжитесь с нами для полной проверки и подготовки заявки в Роспатент.',
+      ],
+    };
     let situation = null;
 
     function showStep(step) {
@@ -736,6 +790,32 @@
           showStep(stepSituation);
         });
       }
+
+      const printBtn = qs('.diagnostic-print-cta', stepResult);
+      const plan = qs('#diagPrintPlan');
+      if (printBtn && plan) {
+        printBtn.addEventListener('click', () => {
+          if (!situation) return;
+          const dateEl = qs('#printPlanDate', plan);
+          const situationEl = qs('#printPlanSituation', plan);
+          const urgencyEl = qs('#printPlanUrgency', plan);
+          const textEl = qs('#printPlanText', plan);
+          const stepsEl = qs('#printPlanSteps', plan);
+          if (dateEl) dateEl.textContent = new Date().toLocaleDateString('ru-RU');
+          if (situationEl) situationEl.textContent = situationLabels[situation] || '—';
+          if (urgencyEl) urgencyEl.textContent = resultBadge.textContent;
+          if (textEl) textEl.textContent = resultText.textContent;
+          if (stepsEl) {
+            stepsEl.innerHTML = '';
+            (nextSteps[situation] || []).forEach((step) => {
+              const li = document.createElement('li');
+              li.textContent = step;
+              stepsEl.appendChild(li);
+            });
+          }
+          window.print();
+        });
+      }
     }
 
     // Calculator
@@ -773,6 +853,7 @@
     initFAQ();
     initHeroParallax();
     initMagneticButtons();
+    initHeroWatermarkDraw();
     initLazyLoading();
     initContactForm();
     initServiceQuickSelect();

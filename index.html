@@ -212,7 +212,12 @@
 
   <!-- HERO -->
   <section class="hero" aria-labelledby="hero-heading">
-    <div class="hero-bg" aria-hidden="true"></div>
+    <div class="hero-bg" aria-hidden="true">
+      <svg class="hero-watermark" viewBox="0 0 100 100" aria-hidden="true" focusable="false">
+        <path class="hero-watermark-shield" d="M25,20 L75,20 L75,48 C75,68 63,82 50,88 C37,82 25,68 25,48 Z" fill="none" stroke="#0B1320" stroke-width="0.6"/>
+        <path class="hero-watermark-gem" d="M50,37 L61,50 L50,63 L39,50 Z" fill="none" stroke="#0B1320" stroke-width="0.5"/>
+      </svg>
+    </div>
 
     <div class="container">
       <div class="hero-columns">
@@ -737,6 +742,7 @@
               <p class="diagnostic-result-text"></p>
               <div class="diagnostic-result-actions">
                 <a href="#contact" class="btn btn-primary diagnostic-result-cta" data-service="">Описать ситуацию →</a>
+                <button type="button" class="diagnostic-print-cta btn btn-outline">Скачать план действий →</button>
                 <button type="button" class="diagnostic-back diagnostic-restart">Пройти заново</button>
               </div>
             </div>
@@ -760,6 +766,34 @@
               <a href="#contact" class="btn btn-outline" data-service="blocking-defense">Узнать, как снять блокировку →</a>
             </div>
           </div>
+        </div>
+      </div>
+
+      <div class="diagnostic-print-plan" id="diagPrintPlan" aria-hidden="true">
+        <div class="print-plan-header">
+          <p class="print-plan-eyebrow">Юридическая практика по интеллектуальной собственности</p>
+          <p class="print-plan-title">Предварительный план действий</p>
+          <p class="print-plan-date" id="printPlanDate"></p>
+        </div>
+        <dl class="print-plan-meta">
+          <div>
+            <dt>Ситуация</dt>
+            <dd id="printPlanSituation"></dd>
+          </div>
+          <div>
+            <dt>Приоритет</dt>
+            <dd id="printPlanUrgency"></dd>
+          </div>
+        </dl>
+        <p class="print-plan-text" id="printPlanText"></p>
+        <div class="print-plan-steps">
+          <h2>Рекомендуемые следующие шаги</h2>
+          <ol id="printPlanSteps"></ol>
+        </div>
+        <p class="print-plan-disclaimer">Этот план сформирован автоматически на основе ваших ответов в форме на сайте. Он не является юридической консультацией или офертой и не учитывает детали вашей ситуации. Для точной оценки — напишите нам.</p>
+        <div class="print-plan-contact">
+          <p>sergeyvlg777@yandex.ru</p>
+          <p>Telegram: t.me/ipzashita</p>
         </div>
       </div>
     </div>
