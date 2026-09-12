@@ -1,10 +1,10 @@
-"""Распознавание чеков через Claude API (Anthropic).
+"""Распознавание чеков через OpenAI (GPT).
 
 Пользователь загружает фото чека — оно один раз, только в этот момент,
-отправляется в Anthropic вместе с его собственным API-ключом, чтобы
-получить сумму, дату, магазин и подходящую категорию. Всё остальное
-в программе (операции, категории, копилки) по-прежнему хранится и
-обрабатывается только локально.
+отправляется в OpenAI вместе с его собственным API-ключом, чтобы получить
+сумму, дату, магазин и подходящую категорию. Всё остальное в программе
+(операции, категории, копилки) по-прежнему хранится и обрабатывается
+только локально.
 """
 
 import base64
@@ -15,10 +15,9 @@ import os
 import requests
 from PIL import Image
 
-API_URL = "https://api.anthropic.com/v1/messages"
-ANTHROPIC_VERSION = "2023-06-01"
-DEFAULT_MODEL = "claude-sonnet-5"
-MAX_IMAGE_SIDE = 1568  # рекомендация Anthropic для оптимального баланса качества/цены
+API_URL = "https://api.openai.com/v1/chat/completions"
+DEFAULT_MODEL = "gpt-4o"
+MAX_IMAGE_SIDE = 1568  # с запасом хватает для чёткого чтения чека, но не раздувает запрос
 
 SUPPORTED_EXTENSIONS = (".jpg", ".jpeg", ".png", ".webp")
 
@@ -73,7 +72,7 @@ def _encode_image(image_path):
 
 
 def analyze_receipt(image_path, category_names, api_key, model=None, timeout=60):
-    """Отправляет фото чека в Claude и возвращает разобранные поля.
+    """Отправляет фото чека в OpenAI (GPT) и возвращает разобранные поля.
 
     category_names — список названий категорий пользователя (обычно расходных),
     чтобы модель выбирала строго из них и не придумывала новые.
@@ -83,7 +82,7 @@ def analyze_receipt(image_path, category_names, api_key, model=None, timeout=60)
     Бросает ReceiptError с понятным русским сообщением при любой проблеме.
     """
     if not api_key:
-        raise ReceiptError("Не указан API-ключ Anthropic. Откройте «Настройки распознавания» и вставьте ключ.")
+        raise ReceiptError("Не указан API-ключ OpenAI. Откройте «Настройки распознавания» и вставьте ключ.")
     if not os.path.exists(image_path):
         raise ReceiptError("Файл изображения не найден.")
 
@@ -92,7 +91,7 @@ def analyze_receipt(image_path, category_names, api_key, model=None, timeout=60)
     categories_list = ", ".join(category_names) if category_names else "Прочее"
     prompt = (
         "Перед тобой фотография кассового чека из российского магазина или заведения. "
-        "Извлеки из него данные о покупке и запиши их вызовом инструмента record_receipt.\n"
+        "Извлеки из него данные о покупке и запиши их вызовом функции record_receipt.\n"
         f"Категория обязательно должна быть одной из этого списка (дословно): {categories_list}. "
         "Если ничего не подходит — выбери «Прочее», если оно есть в списке, иначе первую из списка.\n"
         "Сумму укажи как итоговую сумму к оплате (обычно строка «ИТОГ», «Итого» или «К оплате»), "
@@ -101,17 +100,20 @@ def analyze_receipt(image_path, category_names, api_key, model=None, timeout=60)
     )
 
     tool_schema = {
-        "name": "record_receipt",
-        "description": "Записать данные, извлечённые из чека.",
-        "input_schema": {
-            "type": "object",
-            "properties": {
-                "amount": {"type": "number", "description": "Итоговая сумма чека"},
-                "date": {"type": "string", "description": "Дата покупки в формате ГГГГ-ММ-ДД, если распознана"},
-                "merchant": {"type": "string", "description": "Название магазина или заведения"},
-                "category": {"type": "string", "description": "Одна из предложенных категорий, дословно"},
+        "type": "function",
+        "function": {
+            "name": "record_receipt",
+            "description": "Записать данные, извлечённые из чека.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "amount": {"type": "number", "description": "Итоговая сумма чека"},
+                    "date": {"type": "string", "description": "Дата покупки в формате ГГГГ-ММ-ДД, если распознана"},
+                    "merchant": {"type": "string", "description": "Название магазина или заведения"},
+                    "category": {"type": "string", "description": "Одна из предложенных категорий, дословно"},
+                },
+                "required": ["amount", "category"],
             },
-            "required": ["amount", "category"],
         },
     }
 
@@ -119,22 +121,21 @@ def analyze_receipt(image_path, category_names, api_key, model=None, timeout=60)
         "model": model or DEFAULT_MODEL,
         "max_tokens": 512,
         "tools": [tool_schema],
-        "tool_choice": {"type": "tool", "name": "record_receipt"},
+        "tool_choice": {"type": "function", "function": {"name": "record_receipt"}},
         "messages": [
             {
                 "role": "user",
                 "content": [
-                    {"type": "image", "source": {"type": "base64", "media_type": media_type, "data": image_b64}},
                     {"type": "text", "text": prompt},
+                    {"type": "image_url", "image_url": {"url": f"data:{media_type};base64,{image_b64}"}},
                 ],
             }
         ],
     }
 
     headers = {
-        "x-api-key": api_key,
-        "anthropic-version": ANTHROPIC_VERSION,
-        "content-type": "application/json",
+        "Authorization": f"Bearer {api_key}",
+        "Content-Type": "application/json",
     }
 
     try:
@@ -145,7 +146,7 @@ def analyze_receipt(image_path, category_names, api_key, model=None, timeout=60)
         raise ReceiptError(f"Не удалось соединиться с сервером распознавания: {e}")
 
     if resp.status_code == 401:
-        raise ReceiptError("Неверный API-ключ Anthropic. Проверьте его в «Настройках распознавания».")
+        raise ReceiptError("Неверный API-ключ OpenAI. Проверьте его в «Настройках распознавания».")
     if resp.status_code == 429:
         raise ReceiptError("Превышен лимит запросов к API. Подождите немного и попробуйте снова.")
     if resp.status_code != 200:
@@ -156,11 +157,20 @@ def analyze_receipt(image_path, category_names, api_key, model=None, timeout=60)
     except ValueError:
         raise ReceiptError("Сервер вернул некорректный ответ.")
 
-    tool_use = next((b for b in data.get("content", []) if b.get("type") == "tool_use"), None)
-    if not tool_use:
+    try:
+        tool_calls = data["choices"][0]["message"].get("tool_calls") or []
+    except (KeyError, IndexError, TypeError):
+        raise ReceiptError("Не удалось разобрать чек — модель вернула неожиданный ответ.")
+
+    tool_call = next((c for c in tool_calls if c.get("function", {}).get("name") == "record_receipt"), None)
+    if not tool_call:
         raise ReceiptError("Не удалось разобрать чек — модель не вернула структурированный ответ.")
 
-    fields = tool_use.get("input", {})
+    try:
+        fields = json.loads(tool_call["function"]["arguments"])
+    except (KeyError, ValueError):
+        raise ReceiptError("Не удалось разобрать чек — не получилось прочитать ответ модели.")
+
     amount = fields.get("amount")
     try:
         amount = float(amount) if amount is not None else None

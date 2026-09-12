@@ -249,7 +249,7 @@ class ReceiptSettingsDialog(tk.Toplevel):
         cfg = receipts.load_config(app.receipts_base_dir)
 
         pad = {"padx": 14, "pady": 6}
-        ttk.Label(self, text="API-ключ Anthropic (Claude)", style="Card.TLabel").pack(anchor="w", **pad)
+        ttk.Label(self, text="API-ключ OpenAI (GPT)", style="Card.TLabel").pack(anchor="w", **pad)
         self.key_var = tk.StringVar(value=cfg["api_key"])
         ttk.Entry(self, textvariable=self.key_var, width=44, show="•").pack(padx=14)
 
@@ -259,9 +259,9 @@ class ReceiptSettingsDialog(tk.Toplevel):
 
         ttk.Label(
             self,
-            text="Ключ можно получить на console.anthropic.com. Он хранится только на этом "
+            text="Ключ можно получить на platform.openai.com/api-keys. Он хранится только на этом "
                  "компьютере, в файле receipt_config.json рядом с программой, и никуда, кроме "
-                 "запросов к Anthropic, не отправляется. Фото чека уходит на сервер распознавания "
+                 "запросов к OpenAI, не отправляется. Фото чека уходит на сервер распознавания "
                  "только при нажатии «Загрузить чек».",
             style="Card.TLabel", foreground=INK_DIM, wraplength=380, justify="left",
         ).pack(padx=14, pady=(10, 6))
@@ -972,8 +972,8 @@ class ReceiptsTab(ttk.Frame):
         info = ttk.Label(
             self,
             text="Загрузите фото или скан чека — сумма, дата, магазин и категория распознаются "
-                 "автоматически через Claude API, а перед сохранением их можно проверить и "
-                 "поправить. Нужен свой API-ключ Anthropic (см. «Настройки распознавания») — "
+                 "автоматически через OpenAI (GPT), а перед сохранением их можно проверить и "
+                 "поправить. Нужен свой API-ключ OpenAI (см. «Настройки распознавания») — "
                  "фото уходит на сервер распознавания только при нажатии «Загрузить чек», всё "
                  "остальное в программе по-прежнему хранится только на этом компьютере.",
             background=BG, foreground=INK_DIM, wraplength=760, justify="left",
@@ -1011,7 +1011,7 @@ class ReceiptsTab(ttk.Frame):
         cfg = receipts.load_config(self.app.receipts_base_dir)
         if not cfg["api_key"]:
             messagebox.showinfo("Нужен API-ключ",
-                                 "Сначала укажите API-ключ Anthropic в «Настройках распознавания».")
+                                 "Сначала укажите API-ключ OpenAI в «Настройках распознавания».")
             self.open_settings()
             return
 
