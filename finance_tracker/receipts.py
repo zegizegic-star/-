@@ -16,7 +16,7 @@ import requests
 from PIL import Image
 
 API_URL = "https://api.openai.com/v1/chat/completions"
-DEFAULT_MODEL = "gpt-4o"
+DEFAULT_MODEL = "gpt-5.6-sol"
 MAX_IMAGE_SIDE = 1568  # с запасом хватает для чёткого чтения чека, но не раздувает запрос
 
 SUPPORTED_EXTENSIONS = (".jpg", ".jpeg", ".png", ".webp")
@@ -119,7 +119,7 @@ def analyze_receipt(image_path, category_names, api_key, model=None, timeout=60)
 
     payload = {
         "model": model or DEFAULT_MODEL,
-        "max_tokens": 512,
+        "max_completion_tokens": 512,
         "tools": [tool_schema],
         "tool_choice": {"type": "function", "function": {"name": "record_receipt"}},
         "messages": [
