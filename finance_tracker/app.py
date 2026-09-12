@@ -14,6 +14,8 @@ matplotlib.use("TkAgg")
 from matplotlib.figure import Figure
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 
+from PIL import Image, ImageDraw, ImageFilter, ImageTk
+
 from database import Database
 import receipts
 
@@ -114,6 +116,25 @@ def _lighten(hex_color, amount=22):
     return f"#{r:02x}{g:02x}{b:02x}"
 
 
+def _blend(hex_a, hex_b, t):
+    """Смешивает два цвета: t=0 — чистый hex_a, t=1 — чистый hex_b."""
+    a, b = hex_a.lstrip("#"), hex_b.lstrip("#")
+    ar, ag, ab = (int(a[i:i + 2], 16) for i in (0, 2, 4))
+    br, bg_, bb = (int(b[i:i + 2], 16) for i in (0, 2, 4))
+    r, g, bl = (round(x + (y - x) * t) for x, y in ((ar, br), (ag, bg_), (ab, bb)))
+    return f"#{r:02x}{g:02x}{bl:02x}"
+
+
+def icon_badge(parent, icon, color, size=40, radius=12, parent_bg=None):
+    """Цветная скруглённая плашка с эмодзи-иконкой (для карточек-метрик)."""
+    parent_bg = parent_bg if parent_bg is not None else _widget_bg(parent)
+    tint = _blend(SURFACE2, color, 0.35)
+    c = tk.Canvas(parent, width=size, height=size, highlightthickness=0, bg=parent_bg, bd=0)
+    _rounded_rect(c, 0, 0, size, size, radius, fill=tint, outline="")
+    c.create_text(size / 2, size / 2, text=icon, font=("Segoe UI", int(size * 0.42)))
+    return c
+
+
 def _widget_bg(widget, default=BG):
     """Пытается узнать фон родителя, чтобы скруглённый виджет слился с ним по углам."""
     try:
@@ -122,15 +143,39 @@ def _widget_bg(widget, default=BG):
         return default
 
 
-class RoundedCard(tk.Frame):
-    """Карточка со скруглёнными углами. Дочерние виджеты кладите в card.body, как в обычный Frame."""
+_shadow_cache = {}
 
-    def __init__(self, parent, bg=SURFACE, border=LINE, radius=14, pad=12, corner_bg=None, **kwargs):
+
+def _shadow_image(w, h, radius, blur=7, alpha=90, pad=None):
+    """Готовит (с кэшем по размеру) мягкую размытую тень через PIL — Canvas сам этого не умеет."""
+    key = (w, h, radius, blur, alpha)
+    cached = _shadow_cache.get(key)
+    if cached is not None:
+        return cached
+    pad = pad if pad is not None else blur * 2
+    img = Image.new("RGBA", (w + pad * 2, h + pad * 2), (0, 0, 0, 0))
+    draw = ImageDraw.Draw(img)
+    draw.rounded_rectangle([pad, pad, pad + w, pad + h], radius=radius, fill=(0, 0, 0, alpha))
+    img = img.filter(ImageFilter.GaussianBlur(blur))
+    if len(_shadow_cache) > 200:
+        _shadow_cache.clear()
+    result = (img, pad)
+    _shadow_cache[key] = result
+    return result
+
+
+class RoundedCard(tk.Frame):
+    """Карточка со скруглёнными углами и мягкой тенью. Дочерние виджеты кладите в card.body."""
+
+    def __init__(self, parent, bg=SURFACE, border=LINE, radius=14, pad=12, corner_bg=None,
+                 shadow=True, **kwargs):
         corner_bg = corner_bg if corner_bg is not None else _widget_bg(parent)
         super().__init__(parent, bg=corner_bg, highlightthickness=0, **kwargs)
         self._fill = bg
         self._outline = border
         self._radius = radius
+        self._shadow = shadow
+        self._shadow_photo = None
         self._canvas = tk.Canvas(self, highlightthickness=0, bg=corner_bg, bd=0)
         self._canvas.place(x=0, y=0, relwidth=1, relheight=1)
         self.body = tk.Frame(self, bg=bg)
@@ -140,9 +185,14 @@ class RoundedCard(tk.Frame):
     def _redraw(self, event=None):
         c = self._canvas
         c.delete("card")
+        c.delete("shadow")
         w, h = c.winfo_width(), c.winfo_height()
         if w < 4 or h < 4:
             return
+        if self._shadow:
+            img, pad = _shadow_image(max(1, w - 2), max(1, h - 2), self._radius)
+            self._shadow_photo = ImageTk.PhotoImage(img)
+            c.create_image(1 - pad, 3 - pad, image=self._shadow_photo, anchor="nw", tags="shadow")
         _rounded_rect(c, 1, 1, w - 1, h - 1, self._radius, fill=self._fill, outline=self._outline,
                        width=1, tags="card")
 
@@ -231,6 +281,15 @@ class RoundedButton(tk.Canvas):
 
     config = configure
 
+    def set_kind(self, kind):
+        """Меняет цветовую схему кнопки на лету (например, активный/неактивный сегмент)."""
+        bg, fg, hover_fg = self._KINDS.get(kind, self._KINDS["primary"])
+        self._bg = bg
+        self._hover_bg = _lighten(bg)
+        self._fg = fg
+        self._hover_fg = hover_fg
+        self._draw()
+
     def cget(self, key):
         if key == "state":
             return self._state
@@ -244,6 +303,36 @@ class RoundedButton(tk.Canvas):
 def rbtn(parent, text, command=None, kind="primary", **kwargs):
     """Короткий помощник для создания RoundedButton с автоопределением фона родителя."""
     return RoundedButton(parent, text, command=command, kind=kind, **kwargs)
+
+
+class SegmentToggle(tk.Frame):
+    """Переключатель из нескольких скруглённых кнопок (например, Расход/Доход)."""
+
+    def __init__(self, parent, options, variable, command=None, parent_bg=None, orient="horizontal"):
+        parent_bg = parent_bg if parent_bg is not None else _widget_bg(parent)
+        super().__init__(parent, bg=parent_bg)
+        self.variable = variable
+        self.command = command
+        self._buttons = {}
+        side = "left" if orient == "horizontal" else "top"
+        pad = {"padx": (0, 6)} if orient == "horizontal" else {"pady": (0, 4)}
+        for value, label in options:
+            btn = rbtn(self, label, command=lambda v=value: self._select(v), kind="ghost",
+                       parent_bg=parent_bg)
+            btn.pack(side=side, **pad)
+            self._buttons[value] = btn
+        self._refresh()
+
+    def _select(self, value):
+        self.variable.set(value)
+        self._refresh()
+        if self.command:
+            self.command()
+
+    def _refresh(self):
+        current = self.variable.get()
+        for value, btn in self._buttons.items():
+            btn.set_kind("primary" if value == current else "ghost")
 
 
 def icon_button(parent, symbol, command=None, kind="ghost", size=28, font=None, **kwargs):
@@ -602,13 +691,15 @@ class DashboardTab(ttk.Frame):
             card = RoundedCard(self.summary_frame, radius=16, pad=14)
             card.grid(row=0, column=i, sticky="ew", padx=(0 if i == 0 else 8, 0))
             self.summary_frame.columnconfigure(i, weight=1)
-            head = tk.Frame(card.body, bg=SURFACE)
-            head.pack(anchor="w", fill="x")
-            ttk.Label(head, text=icon, background=SURFACE, font=("Segoe UI", 13)).pack(side="left", padx=(0, 6))
-            ttk.Label(head, text=label, style="Card.TLabel", foreground=INK_DIM,
-                      font=("Segoe UI", 9)).pack(side="left")
-            ttk.Label(card.body, text=fmt_money(value), background=SURFACE, foreground=color,
-                      font=("Consolas", 17, "bold")).pack(anchor="w", pady=(4, 0))
+            row = tk.Frame(card.body, bg=SURFACE)
+            row.pack(fill="x")
+            icon_badge(row, icon, color).pack(side="left", padx=(0, 10))
+            text_col = tk.Frame(row, bg=SURFACE)
+            text_col.pack(side="left", fill="x", expand=True)
+            ttk.Label(text_col, text=label, style="Card.TLabel", foreground=INK_DIM,
+                      font=("Segoe UI", 9)).pack(anchor="w")
+            ttk.Label(text_col, text=fmt_money(value), background=SURFACE, foreground=color,
+                      font=("Consolas", 17, "bold")).pack(anchor="w")
 
         self.alltime_label.configure(
             text=f"Баланс за всё время: {fmt_money(alltime_balance)}   ·   В копилках: {fmt_money(total_saved)}"
@@ -703,18 +794,9 @@ class TransactionsTab(ttk.Frame):
         top.pack(fill="x", pady=(0, 6))
 
         self.type_var = tk.StringVar(value="expense")
-        seg = tk.Frame(top, bg=SURFACE)
+        seg = SegmentToggle(top, [("expense", "Расход"), ("income", "Доход")], self.type_var,
+                             command=self._reload_categories, parent_bg=SURFACE)
         seg.pack(side="left")
-        self.expense_btn = tk.Radiobutton(seg, text="Расход", variable=self.type_var, value="expense",
-                                           command=self._reload_categories, indicatoron=False,
-                                           bg=SURFACE2, fg=EXPENSE, selectcolor=SURFACE2,
-                                           activebackground=SURFACE2, borderwidth=0, padx=14, pady=6)
-        self.expense_btn.pack(side="left", padx=(0, 4))
-        self.income_btn = tk.Radiobutton(seg, text="Доход", variable=self.type_var, value="income",
-                                          command=self._reload_categories, indicatoron=False,
-                                          bg=SURFACE2, fg=INCOME, selectcolor=SURFACE2,
-                                          activebackground=SURFACE2, borderwidth=0, padx=14, pady=6)
-        self.income_btn.pack(side="left")
 
         fields = tk.Frame(form, bg=SURFACE)
         fields.pack(fill="x", pady=6)
@@ -1040,14 +1122,9 @@ class RecurringTab(ttk.Frame):
         row.pack(fill="x")
 
         self.type_var = tk.StringVar(value="expense")
-        seg = tk.Frame(row, bg=SURFACE)
+        seg = SegmentToggle(row, [("expense", "Расход"), ("income", "Доход")], self.type_var,
+                             command=self._reload_categories, parent_bg=SURFACE, orient="vertical")
         seg.grid(row=0, column=0, rowspan=2, padx=(0, 12))
-        tk.Radiobutton(seg, text="Расход", variable=self.type_var, value="expense", command=self._reload_categories,
-                       indicatoron=False, bg=SURFACE2, fg=EXPENSE, selectcolor=SURFACE2, borderwidth=0,
-                       padx=10, pady=6).pack(side="top", pady=1)
-        tk.Radiobutton(seg, text="Доход", variable=self.type_var, value="income", command=self._reload_categories,
-                       indicatoron=False, bg=SURFACE2, fg=INCOME, selectcolor=SURFACE2, borderwidth=0,
-                       padx=10, pady=6).pack(side="top", pady=1)
 
         ttk.Label(row, text="Сумма, ₽", style="Card.TLabel").grid(row=0, column=1, sticky="w")
         self.amount_var = tk.StringVar()
@@ -1326,13 +1403,15 @@ class YearReportTab(ttk.Frame):
             card = RoundedCard(self.summary_frame, radius=16, pad=14)
             card.grid(row=0, column=i, sticky="ew", padx=(0 if i == 0 else 8, 0))
             self.summary_frame.columnconfigure(i, weight=1)
-            head = tk.Frame(card.body, bg=SURFACE)
-            head.pack(anchor="w", fill="x")
-            ttk.Label(head, text=icon, background=SURFACE, font=("Segoe UI", 12)).pack(side="left", padx=(0, 6))
-            ttk.Label(head, text=label, style="Card.TLabel", foreground=INK_DIM,
-                      font=("Segoe UI", 9)).pack(side="left")
-            ttk.Label(card.body, text=fmt_money(value), background=SURFACE, foreground=color,
-                      font=("Consolas", 15, "bold")).pack(anchor="w", pady=(4, 0))
+            row = tk.Frame(card.body, bg=SURFACE)
+            row.pack(fill="x")
+            icon_badge(row, icon, color, size=36).pack(side="left", padx=(0, 8))
+            text_col = tk.Frame(row, bg=SURFACE)
+            text_col.pack(side="left", fill="x", expand=True)
+            ttk.Label(text_col, text=label, style="Card.TLabel", foreground=INK_DIM,
+                      font=("Segoe UI", 9)).pack(anchor="w")
+            ttk.Label(text_col, text=fmt_money(value), background=SURFACE, foreground=color,
+                      font=("Consolas", 15, "bold")).pack(anchor="w")
 
         # расходы по категориям за год
         for w in self.category_rows.winfo_children():
@@ -1455,10 +1534,10 @@ class FinanceApp(tk.Tk):
         style.configure("Card.TFrame", background=SURFACE)
         style.configure("TLabel", background=BG, foreground=INK)
         style.configure("Card.TLabel", background=SURFACE, foreground=INK)
-        style.configure("TNotebook", background=BG, borderwidth=0)
+        style.configure("TNotebook", background=BG, borderwidth=0, tabmargins=(2, 6, 2, 0))
         style.configure("TNotebook.Tab", background=SURFACE, foreground=INK_DIM,
-                        padding=(16, 10), font=("Segoe UI", 10, "bold"), borderwidth=0)
-        style.map("TNotebook.Tab", background=[("selected", SURFACE2)], foreground=[("selected", INK)])
+                        padding=(18, 12), font=("Segoe UI", 10, "bold"), borderwidth=0)
+        style.map("TNotebook.Tab", background=[("selected", SURFACE2)], foreground=[("selected", GOLD)])
         style.configure("TButton", background=GOLD, foreground=BG, padding=8,
                         font=("Segoe UI", 10, "bold"), borderwidth=0)
         style.map("TButton", background=[("active", "#E0B96E")])
