@@ -27,7 +27,7 @@ if errorlevel 1 (
 echo.
 echo Собираю программу в один файл .exe (обычно 1-3 минуты)...
 python -m PyInstaller --noconfirm --onefile --windowed --name "МоиФинансы" ^
-    --icon "icon.ico" --add-data "icon.ico;." app.py
+    --icon "icon.ico" --add-data "icon.ico;." --collect-data certifi app.py
 
 if errorlevel 1 (
     echo [ОШИБКА] Сборка не удалась. Прочитайте сообщение об ошибке выше.

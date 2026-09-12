@@ -32,7 +32,7 @@ jobs:
       - name: Build .exe with PyInstaller
         run: |
           python -m PyInstaller --noconfirm --onefile --windowed --name "МоиФинансы" `
-            --icon "icon.ico" --add-data "icon.ico;." app.py
+            --icon "icon.ico" --add-data "icon.ico;." --collect-data certifi app.py
 
       - name: Smoke-test the built exe
         shell: pwsh

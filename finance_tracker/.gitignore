@@ -5,3 +5,5 @@ dist/
 *.spec
 finance_data.db
 backups/
+receipts/
+receipt_config.json

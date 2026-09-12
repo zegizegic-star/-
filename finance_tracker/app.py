@@ -1,8 +1,11 @@
 import os
 import sys
+import shutil
+import subprocess
+import threading
 import tkinter as tk
 from tkinter import ttk, messagebox, filedialog
-from datetime import date
+from datetime import date, datetime
 import csv
 
 import matplotlib
@@ -11,6 +14,7 @@ from matplotlib.figure import Figure
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 
 from database import Database
+import receipts
 
 try:
     import openpyxl
@@ -230,6 +234,138 @@ class ContributeDialog(tk.Toplevel):
         self.app.db.contribute_saving(self.goal["id"], amount, date.today().isoformat())
         self.destroy()
         self.app.refresh_all()
+
+
+class ReceiptSettingsDialog(tk.Toplevel):
+    def __init__(self, master, app):
+        super().__init__(master)
+        self.app = app
+        self.title("Настройки распознавания чеков")
+        self.configure(bg=SURFACE)
+        self.resizable(False, False)
+        self.transient(master)
+        self.grab_set()
+
+        cfg = receipts.load_config(app.receipts_base_dir)
+
+        pad = {"padx": 14, "pady": 6}
+        ttk.Label(self, text="API-ключ Anthropic (Claude)", style="Card.TLabel").pack(anchor="w", **pad)
+        self.key_var = tk.StringVar(value=cfg["api_key"])
+        ttk.Entry(self, textvariable=self.key_var, width=44, show="•").pack(padx=14)
+
+        ttk.Label(self, text="Модель", style="Card.TLabel").pack(anchor="w", **pad)
+        self.model_var = tk.StringVar(value=cfg["model"])
+        ttk.Entry(self, textvariable=self.model_var, width=44).pack(padx=14)
+
+        ttk.Label(
+            self,
+            text="Ключ можно получить на console.anthropic.com. Он хранится только на этом "
+                 "компьютере, в файле receipt_config.json рядом с программой, и никуда, кроме "
+                 "запросов к Anthropic, не отправляется. Фото чека уходит на сервер распознавания "
+                 "только при нажатии «Загрузить чек».",
+            style="Card.TLabel", foreground=INK_DIM, wraplength=380, justify="left",
+        ).pack(padx=14, pady=(10, 6))
+
+        btn_row = ttk.Frame(self, style="Card.TFrame")
+        btn_row.pack(pady=14)
+        ttk.Button(btn_row, text="Сохранить", command=self.save).pack(side="left", padx=6)
+        ttk.Button(btn_row, text="Отмена", style="Ghost.TButton", command=self.destroy).pack(side="left", padx=6)
+
+    def save(self):
+        receipts.save_config(self.app.receipts_base_dir, self.key_var.get(), self.model_var.get())
+        self.destroy()
+        messagebox.showinfo("Готово", "Настройки сохранены.")
+
+
+class ReceiptReviewDialog(tk.Toplevel):
+    """Показывает распознанные данные чека и даёт их поправить перед сохранением."""
+
+    def __init__(self, master, app, parsed, image_path):
+        super().__init__(master)
+        self.app = app
+        self.image_path = image_path
+        self.title("Проверьте данные чека")
+        self.configure(bg=SURFACE)
+        self.resizable(False, False)
+        self.transient(master)
+        self.grab_set()
+
+        pad = {"padx": 14, "pady": 6}
+
+        self.type_var = tk.StringVar(value="expense")
+        row = ttk.Frame(self, style="Card.TFrame")
+        row.pack(**pad)
+        ttk.Radiobutton(row, text="Расход", variable=self.type_var, value="expense",
+                         command=self._reload_categories).pack(side="left", padx=4)
+        ttk.Radiobutton(row, text="Доход", variable=self.type_var, value="income",
+                         command=self._reload_categories).pack(side="left", padx=4)
+
+        ttk.Label(self, text="Сумма, ₽", style="Card.TLabel").pack(anchor="w", **pad)
+        amount = parsed.get("amount")
+        self.amount_var = tk.StringVar(value=(f"{amount:g}" if amount else ""))
+        ttk.Entry(self, textvariable=self.amount_var, width=30).pack(padx=14)
+
+        ttk.Label(self, text="Дата (ГГГГ-ММ-ДД)", style="Card.TLabel").pack(anchor="w", **pad)
+        self.date_var = tk.StringVar(value=parsed.get("date") or date.today().isoformat())
+        ttk.Entry(self, textvariable=self.date_var, width=30).pack(padx=14)
+
+        ttk.Label(self, text="Категория", style="Card.TLabel").pack(anchor="w", **pad)
+        self.category_var = tk.StringVar()
+        self.category_combo = ttk.Combobox(self, textvariable=self.category_var, width=28, state="readonly")
+        self.category_combo.pack(padx=14)
+
+        ttk.Label(self, text="Заметка", style="Card.TLabel").pack(anchor="w", **pad)
+        self.note_var = tk.StringVar(value=parsed.get("note") or "")
+        ttk.Entry(self, textvariable=self.note_var, width=30).pack(padx=14)
+
+        self._reload_categories(preselect=parsed.get("category"))
+
+        btn_row = ttk.Frame(self, style="Card.TFrame")
+        btn_row.pack(pady=14)
+        ttk.Button(btn_row, text="Добавить операцию", command=self.save).pack(side="left", padx=6)
+        ttk.Button(btn_row, text="Отмена", style="Ghost.TButton", command=self.destroy).pack(side="left", padx=6)
+
+    def _reload_categories(self, preselect=None):
+        cats = self.app.db.get_categories(self.type_var.get())
+        self._cat_map = {c["name"]: c["id"] for c in cats}
+        self.category_combo["values"] = list(self._cat_map.keys())
+        if preselect and preselect in self._cat_map:
+            self.category_var.set(preselect)
+        elif self._cat_map:
+            self.category_var.set(next(iter(self._cat_map)))
+        else:
+            self.category_var.set("")
+
+    def save(self):
+        try:
+            amount = float(str(self.amount_var.get()).replace(",", "."))
+        except ValueError:
+            messagebox.showwarning("Проверка", "Введите корректную сумму")
+            return
+        cat_id = self._cat_map.get(self.category_var.get())
+        d = self.date_var.get().strip()
+        if amount <= 0 or not cat_id or not d:
+            messagebox.showwarning("Проверка", "Заполните сумму, категорию и дату")
+            return
+        note = self.note_var.get().strip()
+        tx_id = self.app.db.add_transaction(self.type_var.get(), amount, cat_id, d, note)
+        self._save_receipt_copy(tx_id, note)
+        self.destroy()
+        self.app.refresh_all()
+
+    def _save_receipt_copy(self, tx_id, note):
+        """Копирует фото чека в receipts/, привязывая его к операции через id в имени файла."""
+        try:
+            receipts_dir = self.app.receipts_dir()
+            os.makedirs(receipts_dir, exist_ok=True)
+            ext = os.path.splitext(self.image_path)[1].lower() or ".jpg"
+            safe_note = "".join(c for c in note if c.isalnum() or c in " _-").strip()[:30]
+            stamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            suffix = f"_{safe_note}" if safe_note else ""
+            dest = os.path.join(receipts_dir, f"{tx_id}_{stamp}{suffix}{ext}")
+            shutil.copy2(self.image_path, dest)
+        except OSError:
+            pass  # операция уже сохранена — если чек не скопировался, это не критично
 
 
 # =================================================================
@@ -823,6 +959,130 @@ class RecurringTab(ttk.Frame):
 
 
 # =================================================================
+# Вкладка "Чеки"
+# =================================================================
+
+class ReceiptsTab(ttk.Frame):
+    def __init__(self, master, app):
+        super().__init__(master, style="TFrame")
+        self.app = app
+        self._build()
+
+    def _build(self):
+        info = ttk.Label(
+            self,
+            text="Загрузите фото или скан чека — сумма, дата, магазин и категория распознаются "
+                 "автоматически через Claude API, а перед сохранением их можно проверить и "
+                 "поправить. Нужен свой API-ключ Anthropic (см. «Настройки распознавания») — "
+                 "фото уходит на сервер распознавания только при нажатии «Загрузить чек», всё "
+                 "остальное в программе по-прежнему хранится только на этом компьютере.",
+            background=BG, foreground=INK_DIM, wraplength=760, justify="left",
+        )
+        info.pack(fill="x", pady=(6, 10))
+
+        top = tk.Frame(self, bg=BG)
+        top.pack(fill="x", pady=(0, 10))
+        self.upload_btn = ttk.Button(top, text="📎 Загрузить чек", command=self.upload)
+        self.upload_btn.pack(side="left")
+        ttk.Button(top, text="⚙ Настройки распознавания", style="Ghost.TButton",
+                   command=self.open_settings).pack(side="left", padx=8)
+        self.status_var = tk.StringVar(value="")
+        ttk.Label(top, textvariable=self.status_var, background=BG, foreground=GOLD).pack(side="left", padx=12)
+
+        history_card = tk.Frame(self, bg=SURFACE, highlightbackground=LINE, highlightthickness=1)
+        history_card.pack(fill="both", expand=True)
+        ttk.Label(history_card, text="Загруженные чеки", style="Card.TLabel",
+                  font=("Georgia", 11, "bold")).pack(anchor="w", padx=12, pady=(10, 6))
+        self.history_rows = tk.Frame(history_card, bg=SURFACE)
+        self.history_rows.pack(fill="both", expand=True, padx=12, pady=(0, 12))
+
+        self.refresh()
+
+    def open_settings(self):
+        ReceiptSettingsDialog(self, self.app)
+
+    def upload(self):
+        path = filedialog.askopenfilename(
+            title="Выберите фото чека",
+            filetypes=[("Изображения", "*.jpg *.jpeg *.png *.webp")],
+        )
+        if not path:
+            return
+        cfg = receipts.load_config(self.app.receipts_base_dir)
+        if not cfg["api_key"]:
+            messagebox.showinfo("Нужен API-ключ",
+                                 "Сначала укажите API-ключ Anthropic в «Настройках распознавания».")
+            self.open_settings()
+            return
+
+        self.upload_btn.configure(state="disabled")
+        self.status_var.set("Распознаём чек…")
+
+        expense_cats = [c["name"] for c in self.app.db.get_categories("expense")]
+        result_box = {}
+
+        def worker():
+            try:
+                result_box["data"] = receipts.analyze_receipt(
+                    path, expense_cats, cfg["api_key"], cfg["model"])
+            except receipts.ReceiptError as e:
+                result_box["error"] = str(e)
+            except Exception as e:
+                result_box["error"] = f"Неожиданная ошибка: {e}"
+
+        thread = threading.Thread(target=worker, daemon=True)
+        thread.start()
+        self.after(200, lambda: self._poll(thread, result_box, path))
+
+    def _poll(self, thread, result_box, path):
+        if thread.is_alive():
+            self.after(200, lambda: self._poll(thread, result_box, path))
+            return
+        self.upload_btn.configure(state="normal")
+        self.status_var.set("")
+        if "error" in result_box:
+            messagebox.showerror("Не удалось распознать чек", result_box["error"])
+            parsed = {"amount": None, "date": None, "merchant": "", "category": "", "note": ""}
+        else:
+            parsed = result_box["data"]
+        ReceiptReviewDialog(self, self.app, parsed, path)
+        self.refresh()
+
+    def refresh(self):
+        for w in self.history_rows.winfo_children():
+            w.destroy()
+        receipts_dir = self.app.receipts_dir()
+        files = []
+        if os.path.isdir(receipts_dir):
+            files = sorted(
+                (f for f in os.listdir(receipts_dir) if os.path.isfile(os.path.join(receipts_dir, f))),
+                key=lambda f: os.path.getmtime(os.path.join(receipts_dir, f)),
+                reverse=True,
+            )
+        if not files:
+            ttk.Label(self.history_rows, text="Пока нет загруженных чеков.",
+                      style="Card.TLabel", foreground=INK_DIM).pack(anchor="w", pady=8)
+            return
+        for f in files[:50]:
+            row = tk.Frame(self.history_rows, bg=SURFACE)
+            row.pack(fill="x", pady=3)
+            ttk.Label(row, text=f, style="Card.TLabel", font=("Consolas", 9)).pack(side="left")
+            ttk.Button(row, text="Открыть", style="Ghost.TButton", width=10,
+                       command=lambda f=f: self._open_file(os.path.join(receipts_dir, f))).pack(side="right")
+
+    def _open_file(self, path):
+        try:
+            if sys.platform.startswith("win"):
+                os.startfile(path)
+            elif sys.platform == "darwin":
+                subprocess.run(["open", path], check=False)
+            else:
+                subprocess.run(["xdg-open", path], check=False)
+        except OSError as e:
+            messagebox.showerror("Ошибка", f"Не удалось открыть файл:\n{e}")
+
+
+# =================================================================
 # Вкладка "Годовой отчёт"
 # =================================================================
 
@@ -1000,6 +1260,7 @@ class FinanceApp(tk.Tk):
         self.configure(bg=BG)
         self._set_app_icon()
         self.db = Database()
+        self.receipts_base_dir = os.path.dirname(self.db.path)
         self.current_month = month_key(date.today())
 
         self._setup_style()
@@ -1009,6 +1270,9 @@ class FinanceApp(tk.Tk):
         self.refresh_all()
         if applied:
             messagebox.showinfo("Регулярные платежи", f"Автоматически добавлено операций: {len(applied)}")
+
+    def receipts_dir(self):
+        return os.path.join(self.receipts_base_dir, "receipts")
 
     def _set_app_icon(self):
         """Заменяет стандартную иконку Tk на иконку приложения (icon.ico)."""
@@ -1074,6 +1338,7 @@ class FinanceApp(tk.Tk):
         self.tab_categories = CategoriesTab(self.notebook, self)
         self.tab_savings = SavingsTab(self.notebook, self)
         self.tab_recurring = RecurringTab(self.notebook, self)
+        self.tab_receipts = ReceiptsTab(self.notebook, self)
         self.tab_yearreport = YearReportTab(self.notebook, self)
 
         self.notebook.add(self.tab_dashboard, text="  Дашборд  ")
@@ -1081,6 +1346,7 @@ class FinanceApp(tk.Tk):
         self.notebook.add(self.tab_categories, text="  Категории  ")
         self.notebook.add(self.tab_savings, text="  Копилки  ")
         self.notebook.add(self.tab_recurring, text="  Регулярные платежи  ")
+        self.notebook.add(self.tab_receipts, text="  Чеки  ")
         self.notebook.add(self.tab_yearreport, text="  Годовой отчёт  ")
 
     def change_month(self, delta):
@@ -1094,6 +1360,7 @@ class FinanceApp(tk.Tk):
         self.tab_categories.refresh()
         self.tab_savings.refresh()
         self.tab_recurring.refresh()
+        self.tab_receipts.refresh()
         self.tab_yearreport.refresh()
 
 
