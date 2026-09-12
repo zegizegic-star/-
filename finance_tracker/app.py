@@ -4,6 +4,7 @@ import shutil
 import subprocess
 import threading
 import tkinter as tk
+import tkinter.font as tkfont
 from tkinter import ttk, messagebox, filedialog
 from datetime import date, datetime
 import csv
@@ -81,14 +82,174 @@ def month_label(key):
 
 
 def make_bar(parent, value, maximum, color, width=220, height=8):
-    """Небольшая цветная полоса прогресса, нарисованная на Canvas (чтобы был свой цвет)."""
-    c = tk.Canvas(parent, width=width, height=height, bg=SURFACE2, highlightthickness=0)
+    """Небольшая цветная полоса прогресса со скруглёнными краями, нарисованная на Canvas."""
+    bg = parent.cget("bg") if "bg" in parent.keys() else SURFACE
+    c = tk.Canvas(parent, width=width, height=height, bg=bg, highlightthickness=0)
     pct = 0 if maximum <= 0 else min(1.0, value / maximum)
     over = maximum > 0 and value > maximum
     fill = DANGER if over else color
-    c.create_rectangle(0, 0, width, height, fill=SURFACE2, outline="")
-    c.create_rectangle(0, 0, max(2, width * pct), height, fill=fill, outline="")
+    r = height / 2
+    _rounded_rect(c, 0, 0, width, height, r, fill=SURFACE2, outline="")
+    fill_w = max(height, width * pct)
+    if pct > 0:
+        _rounded_rect(c, 0, 0, fill_w, height, r, fill=fill, outline="")
     return c
+
+
+def _rounded_rect(canvas, x1, y1, x2, y2, r, **kwargs):
+    """Рисует на canvas прямоугольник со скруглёнными углами радиуса r."""
+    r = max(0, min(r, (x2 - x1) / 2, (y2 - y1) / 2))
+    pts = [
+        x1 + r, y1, x2 - r, y1, x2, y1, x2, y1 + r,
+        x2, y2 - r, x2, y2, x2 - r, y2, x1 + r, y2,
+        x1, y2, x1, y2 - r, x1, y1 + r, x1, y1,
+    ]
+    return canvas.create_polygon(pts, smooth=True, **kwargs)
+
+
+def _lighten(hex_color, amount=22):
+    hex_color = hex_color.lstrip("#")
+    r, g, b = (int(hex_color[i:i + 2], 16) for i in (0, 2, 4))
+    r, g, b = (min(255, c + amount) for c in (r, g, b))
+    return f"#{r:02x}{g:02x}{b:02x}"
+
+
+def _widget_bg(widget, default=BG):
+    """Пытается узнать фон родителя, чтобы скруглённый виджет слился с ним по углам."""
+    try:
+        return widget.cget("bg")
+    except tk.TclError:
+        return default
+
+
+class RoundedCard(tk.Frame):
+    """Карточка со скруглёнными углами. Дочерние виджеты кладите в card.body, как в обычный Frame."""
+
+    def __init__(self, parent, bg=SURFACE, border=LINE, radius=14, pad=12, corner_bg=None, **kwargs):
+        corner_bg = corner_bg if corner_bg is not None else _widget_bg(parent)
+        super().__init__(parent, bg=corner_bg, highlightthickness=0, **kwargs)
+        self._fill = bg
+        self._outline = border
+        self._radius = radius
+        self._canvas = tk.Canvas(self, highlightthickness=0, bg=corner_bg, bd=0)
+        self._canvas.place(x=0, y=0, relwidth=1, relheight=1)
+        self.body = tk.Frame(self, bg=bg)
+        self.body.pack(fill="both", expand=True, padx=pad, pady=pad)
+        self._canvas.bind("<Configure>", self._redraw)
+
+    def _redraw(self, event=None):
+        c = self._canvas
+        c.delete("card")
+        w, h = c.winfo_width(), c.winfo_height()
+        if w < 4 or h < 4:
+            return
+        _rounded_rect(c, 1, 1, w - 1, h - 1, self._radius, fill=self._fill, outline=self._outline,
+                       width=1, tags="card")
+
+
+class RoundedButton(tk.Canvas):
+    """Кнопка со скруглёнными углами и hover-эффектом, нарисованная на Canvas."""
+
+    _KINDS = {
+        # kind: (fill, fg, hover_fg)
+        "primary": (GOLD, BG, BG),
+        "ghost": (SURFACE2, INK_DIM, INK),
+        "danger": (DANGER, "white", "white"),
+    }
+
+    def __init__(self, parent, text, command=None, kind="primary", width=None, height=32,
+                 radius=12, hpad=18, font=None, parent_bg=None):
+        bg, fg, hover_fg = self._KINDS.get(kind, self._KINDS["primary"])
+        self._bg = bg
+        self._hover_bg = _lighten(bg)
+        self._disabled_bg = SURFACE2
+        self._fg = fg
+        self._hover_fg = hover_fg
+        self._font = font or ("Segoe UI", 10, "bold")
+        self._text = text
+        self._radius = radius
+        self._state = "normal"
+        self._hovering = False
+        self.command = command
+        self._hpad = hpad
+        self._auto_width = width is None
+
+        if width is None:
+            width = tkfont.Font(font=self._font).measure(text) + hpad * 2
+
+        parent_bg = parent_bg if parent_bg is not None else _widget_bg(parent)
+        super().__init__(parent, width=width, height=height, highlightthickness=0, bg=parent_bg, bd=0)
+        self._draw()
+        self.bind("<Enter>", self._on_enter)
+        self.bind("<Leave>", self._on_leave)
+        self.bind("<Button-1>", self._on_click)
+
+    def _draw(self):
+        self.delete("all")
+        w, h = int(self["width"]), int(self["height"])
+        r = min(self._radius, w // 2, h // 2)
+        if self._state == "disabled":
+            fill, fg = self._disabled_bg, INK_DIM
+        elif self._hovering:
+            fill, fg = self._hover_bg, self._hover_fg
+        else:
+            fill, fg = self._bg, self._fg
+        _rounded_rect(self, 0, 0, w, h, r, fill=fill, outline="")
+        self.create_text(w / 2, h / 2, text=self._text, fill=fg, font=self._font)
+
+    def _on_enter(self, event):
+        if self._state != "disabled":
+            self._hovering = True
+            self._draw()
+            self.configure(cursor="hand2")
+
+    def _on_leave(self, event):
+        self._hovering = False
+        self._draw()
+
+    def _on_click(self, event):
+        if self._state != "disabled" and self.command:
+            self.command()
+
+    def configure(self, **kwargs):
+        redraw = False
+        if "state" in kwargs:
+            self._state = kwargs.pop("state")
+            redraw = True
+        if "text" in kwargs:
+            self._text = kwargs.pop("text")
+            if self._auto_width:
+                new_width = tkfont.Font(font=self._font).measure(self._text) + self._hpad * 2
+                super().configure(width=new_width)
+            redraw = True
+        if "command" in kwargs:
+            self.command = kwargs.pop("command")
+        if kwargs:
+            super().configure(**kwargs)
+        if redraw:
+            self._draw()
+
+    config = configure
+
+    def cget(self, key):
+        if key == "state":
+            return self._state
+        if key == "text":
+            return self._text
+        return super().cget(key)
+
+    __getitem__ = cget
+
+
+def rbtn(parent, text, command=None, kind="primary", **kwargs):
+    """Короткий помощник для создания RoundedButton с автоопределением фона родителя."""
+    return RoundedButton(parent, text, command=command, kind=kind, **kwargs)
+
+
+def icon_button(parent, symbol, command=None, kind="ghost", size=28, font=None, **kwargs):
+    """Круглая кнопка-иконка (для ✎, 🗑, ◀, ▶ и т.п.)."""
+    return RoundedButton(parent, symbol, command=command, kind=kind, width=size, height=size,
+                          radius=size // 2, hpad=0, font=font or ("Segoe UI", 11), **kwargs)
 
 
 # =================================================================
@@ -114,7 +275,7 @@ class CategoryDialog(tk.Toplevel):
 
         self.type_var = tk.StringVar(value=(category["type"] if category else (fixed_type or "expense")))
         if not category and not fixed_type:
-            row = ttk.Frame(self, style="Card.TFrame")
+            row = tk.Frame(self, bg=SURFACE)
             row.pack(**pad)
             ttk.Radiobutton(row, text="Расход", variable=self.type_var, value="expense").pack(side="left", padx=4)
             ttk.Radiobutton(row, text="Доход", variable=self.type_var, value="income").pack(side="left", padx=4)
@@ -126,7 +287,7 @@ class CategoryDialog(tk.Toplevel):
 
         ttk.Label(self, text="Цвет", style="Card.TLabel").pack(anchor="w", **pad)
         self.color_var = tk.StringVar(value=category["color"] if category else PALETTE[0])
-        swatch_row = ttk.Frame(self, style="Card.TFrame")
+        swatch_row = tk.Frame(self, bg=SURFACE)
         swatch_row.pack(padx=14, pady=4)
         for i, c in enumerate(PALETTE):
             b = tk.Canvas(swatch_row, width=20, height=20, bg=c, highlightthickness=2,
@@ -134,10 +295,10 @@ class CategoryDialog(tk.Toplevel):
             b.grid(row=0, column=i, padx=2)
             b.bind("<Button-1>", lambda e, c=c: self.color_var.set(c))
 
-        btn_row = ttk.Frame(self, style="Card.TFrame")
+        btn_row = tk.Frame(self, bg=SURFACE)
         btn_row.pack(pady=14)
-        ttk.Button(btn_row, text="Сохранить", command=self.save).pack(side="left", padx=6)
-        ttk.Button(btn_row, text="Отмена", style="Ghost.TButton", command=self.destroy).pack(side="left", padx=6)
+        rbtn(btn_row, "Сохранить", command=self.save, kind="primary").pack(side="left", padx=6)
+        rbtn(btn_row, "Отмена", command=self.destroy, kind="ghost").pack(side="left", padx=6)
 
     def save(self):
         name = self.name_var.get().strip()
@@ -178,10 +339,10 @@ class GoalDialog(tk.Toplevel):
         self.target_var = tk.StringVar(value=str(int(goal["target"])) if goal else "")
         ttk.Entry(self, textvariable=self.target_var, width=30).pack(padx=14)
 
-        btn_row = ttk.Frame(self, style="Card.TFrame")
+        btn_row = tk.Frame(self, bg=SURFACE)
         btn_row.pack(pady=14)
-        ttk.Button(btn_row, text="Сохранить", command=self.save).pack(side="left", padx=6)
-        ttk.Button(btn_row, text="Отмена", style="Ghost.TButton", command=self.destroy).pack(side="left", padx=6)
+        rbtn(btn_row, "Сохранить", command=self.save, kind="primary").pack(side="left", padx=6)
+        rbtn(btn_row, "Отмена", command=self.destroy, kind="ghost").pack(side="left", padx=6)
 
     def save(self):
         name = self.name_var.get().strip()
@@ -218,10 +379,10 @@ class ContributeDialog(tk.Toplevel):
         entry.pack(padx=14)
         entry.focus()
 
-        btn_row = ttk.Frame(self, style="Card.TFrame")
+        btn_row = tk.Frame(self, bg=SURFACE)
         btn_row.pack(pady=14)
-        ttk.Button(btn_row, text="Пополнить", command=self.save).pack(side="left", padx=6)
-        ttk.Button(btn_row, text="Отмена", style="Ghost.TButton", command=self.destroy).pack(side="left", padx=6)
+        rbtn(btn_row, "Пополнить", command=self.save, kind="primary").pack(side="left", padx=6)
+        rbtn(btn_row, "Отмена", command=self.destroy, kind="ghost").pack(side="left", padx=6)
 
     def save(self):
         try:
@@ -266,10 +427,10 @@ class ReceiptSettingsDialog(tk.Toplevel):
             style="Card.TLabel", foreground=INK_DIM, wraplength=380, justify="left",
         ).pack(padx=14, pady=(10, 6))
 
-        btn_row = ttk.Frame(self, style="Card.TFrame")
+        btn_row = tk.Frame(self, bg=SURFACE)
         btn_row.pack(pady=14)
-        ttk.Button(btn_row, text="Сохранить", command=self.save).pack(side="left", padx=6)
-        ttk.Button(btn_row, text="Отмена", style="Ghost.TButton", command=self.destroy).pack(side="left", padx=6)
+        rbtn(btn_row, "Сохранить", command=self.save, kind="primary").pack(side="left", padx=6)
+        rbtn(btn_row, "Отмена", command=self.destroy, kind="ghost").pack(side="left", padx=6)
 
     def save(self):
         receipts.save_config(self.app.receipts_base_dir, self.key_var.get(), self.model_var.get())
@@ -293,7 +454,7 @@ class ReceiptReviewDialog(tk.Toplevel):
         pad = {"padx": 14, "pady": 6}
 
         self.type_var = tk.StringVar(value="expense")
-        row = ttk.Frame(self, style="Card.TFrame")
+        row = tk.Frame(self, bg=SURFACE)
         row.pack(**pad)
         ttk.Radiobutton(row, text="Расход", variable=self.type_var, value="expense",
                          command=self._reload_categories).pack(side="left", padx=4)
@@ -320,10 +481,10 @@ class ReceiptReviewDialog(tk.Toplevel):
 
         self._reload_categories(preselect=parsed.get("category"))
 
-        btn_row = ttk.Frame(self, style="Card.TFrame")
+        btn_row = tk.Frame(self, bg=SURFACE)
         btn_row.pack(pady=14)
-        ttk.Button(btn_row, text="Добавить операцию", command=self.save).pack(side="left", padx=6)
-        ttk.Button(btn_row, text="Отмена", style="Ghost.TButton", command=self.destroy).pack(side="left", padx=6)
+        rbtn(btn_row, "Добавить операцию", command=self.save, kind="primary").pack(side="left", padx=6)
+        rbtn(btn_row, "Отмена", command=self.destroy, kind="ghost").pack(side="left", padx=6)
 
     def _reload_categories(self, preselect=None):
         cats = self.app.db.get_categories(self.type_var.get())
@@ -395,32 +556,32 @@ class DashboardTab(ttk.Frame):
         body.columnconfigure(1, weight=1)
 
         # бюджеты
-        self.budget_card = tk.Frame(body, bg=SURFACE, highlightbackground=LINE, highlightthickness=1)
+        self.budget_card = RoundedCard(body, radius=16)
         self.budget_card.grid(row=0, column=0, sticky="nsew", padx=(0, 8), pady=6)
-        ttk.Label(self.budget_card, text="Бюджет по категориям", style="Card.TLabel",
-                  font=("Georgia", 11, "bold")).pack(anchor="w", padx=12, pady=(10, 6))
-        self.budget_rows = tk.Frame(self.budget_card, bg=SURFACE)
-        self.budget_rows.pack(fill="x", padx=12, pady=(0, 12))
+        ttk.Label(self.budget_card.body, text="Бюджет по категориям", style="Card.TLabel",
+                  font=("Georgia", 12, "bold")).pack(anchor="w", pady=(0, 8))
+        self.budget_rows = tk.Frame(self.budget_card.body, bg=SURFACE)
+        self.budget_rows.pack(fill="x")
 
         # круговая диаграмма
-        pie_card = tk.Frame(body, bg=SURFACE, highlightbackground=LINE, highlightthickness=1)
+        pie_card = RoundedCard(body, radius=16)
         pie_card.grid(row=0, column=1, sticky="nsew", padx=(8, 0), pady=6)
-        ttk.Label(pie_card, text="Расходы по категориям", style="Card.TLabel",
-                  font=("Georgia", 11, "bold")).pack(anchor="w", padx=12, pady=(10, 0))
+        ttk.Label(pie_card.body, text="Расходы по категориям", style="Card.TLabel",
+                  font=("Georgia", 12, "bold")).pack(anchor="w")
         self.pie_fig = Figure(figsize=(4, 3), dpi=90, facecolor=SURFACE)
         self.pie_ax = self.pie_fig.add_subplot(111)
-        self.pie_canvas = FigureCanvasTkAgg(self.pie_fig, master=pie_card)
-        self.pie_canvas.get_tk_widget().pack(fill="both", expand=True, padx=6, pady=6)
+        self.pie_canvas = FigureCanvasTkAgg(self.pie_fig, master=pie_card.body)
+        self.pie_canvas.get_tk_widget().pack(fill="both", expand=True)
 
         # тренд
-        trend_card = tk.Frame(outer, bg=SURFACE, highlightbackground=LINE, highlightthickness=1)
+        trend_card = RoundedCard(outer, radius=16)
         trend_card.pack(fill="both", expand=True, pady=(10, 0))
-        ttk.Label(trend_card, text="Динамика за 6 месяцев", style="Card.TLabel",
-                  font=("Georgia", 11, "bold")).pack(anchor="w", padx=12, pady=(10, 0))
+        ttk.Label(trend_card.body, text="Динамика за 6 месяцев", style="Card.TLabel",
+                  font=("Georgia", 12, "bold")).pack(anchor="w")
         self.trend_fig = Figure(figsize=(6, 2.6), dpi=90, facecolor=SURFACE)
         self.trend_ax = self.trend_fig.add_subplot(111)
-        self.trend_canvas = FigureCanvasTkAgg(self.trend_fig, master=trend_card)
-        self.trend_canvas.get_tk_widget().pack(fill="both", expand=True, padx=6, pady=6)
+        self.trend_canvas = FigureCanvasTkAgg(self.trend_fig, master=trend_card.body)
+        self.trend_canvas.get_tk_widget().pack(fill="both", expand=True)
 
     def refresh(self):
         db = self.app.db
@@ -435,16 +596,19 @@ class DashboardTab(ttk.Frame):
 
         for w in self.summary_frame.winfo_children():
             w.destroy()
-        cards = [("Доход", income, INCOME), ("Расход", expense, EXPENSE),
-                 ("Баланс", balance, GOLD if balance >= 0 else DANGER)]
-        for i, (label, value, color) in enumerate(cards):
-            card = tk.Frame(self.summary_frame, bg=SURFACE, highlightbackground=LINE, highlightthickness=1)
-            card.grid(row=0, column=i, sticky="ew", padx=(0 if i == 0 else 6, 0))
+        cards = [("💰", "Доход", income, INCOME), ("💸", "Расход", expense, EXPENSE),
+                 ("⚖", "Баланс", balance, GOLD if balance >= 0 else DANGER)]
+        for i, (icon, label, value, color) in enumerate(cards):
+            card = RoundedCard(self.summary_frame, radius=16, pad=14)
+            card.grid(row=0, column=i, sticky="ew", padx=(0 if i == 0 else 8, 0))
             self.summary_frame.columnconfigure(i, weight=1)
-            ttk.Label(card, text=label, style="Card.TLabel", foreground=INK_DIM,
-                      font=("Segoe UI", 9)).pack(anchor="w", padx=12, pady=(10, 0))
-            ttk.Label(card, text=fmt_money(value), background=SURFACE, foreground=color,
-                      font=("Consolas", 15, "bold")).pack(anchor="w", padx=12, pady=(0, 10))
+            head = tk.Frame(card.body, bg=SURFACE)
+            head.pack(anchor="w", fill="x")
+            ttk.Label(head, text=icon, background=SURFACE, font=("Segoe UI", 13)).pack(side="left", padx=(0, 6))
+            ttk.Label(head, text=label, style="Card.TLabel", foreground=INK_DIM,
+                      font=("Segoe UI", 9)).pack(side="left")
+            ttk.Label(card.body, text=fmt_money(value), background=SURFACE, foreground=color,
+                      font=("Consolas", 17, "bold")).pack(anchor="w", pady=(4, 0))
 
         self.alltime_label.configure(
             text=f"Баланс за всё время: {fmt_money(alltime_balance)}   ·   В копилках: {fmt_money(total_saved)}"
@@ -531,11 +695,12 @@ class TransactionsTab(ttk.Frame):
         self._build()
 
     def _build(self):
-        form = tk.Frame(self, bg=SURFACE, highlightbackground=LINE, highlightthickness=1)
-        form.pack(fill="x", pady=(6, 10))
+        form_card = RoundedCard(self, radius=16)
+        form_card.pack(fill="x", pady=(6, 10))
+        form = form_card.body
 
         top = tk.Frame(form, bg=SURFACE)
-        top.pack(fill="x", padx=12, pady=(12, 6))
+        top.pack(fill="x", pady=(0, 6))
 
         self.type_var = tk.StringVar(value="expense")
         seg = tk.Frame(top, bg=SURFACE)
@@ -552,7 +717,7 @@ class TransactionsTab(ttk.Frame):
         self.income_btn.pack(side="left")
 
         fields = tk.Frame(form, bg=SURFACE)
-        fields.pack(fill="x", padx=12, pady=6)
+        fields.pack(fill="x", pady=6)
 
         ttk.Label(fields, text="Сумма, ₽", style="Card.TLabel").grid(row=0, column=0, sticky="w")
         self.amount_var = tk.StringVar()
@@ -579,11 +744,10 @@ class TransactionsTab(ttk.Frame):
             widget.bind("<Return>", lambda e: self.submit())
 
         btn_row = tk.Frame(form, bg=SURFACE)
-        btn_row.pack(fill="x", padx=12, pady=(6, 12))
-        self.submit_btn = ttk.Button(btn_row, text="+ Добавить", command=self.submit)
+        btn_row.pack(fill="x", pady=(6, 0))
+        self.submit_btn = rbtn(btn_row, "+ Добавить", command=self.submit, kind="primary")
         self.submit_btn.pack(side="left")
-        self.cancel_edit_btn = ttk.Button(btn_row, text="Отменить изменение", style="Ghost.TButton",
-                                           command=self.cancel_edit)
+        self.cancel_edit_btn = rbtn(btn_row, "Отменить изменение", command=self.cancel_edit, kind="ghost")
 
         # поиск
         search_row = tk.Frame(self, bg=BG)
@@ -593,8 +757,7 @@ class TransactionsTab(ttk.Frame):
         search_entry = ttk.Entry(search_row, textvariable=self.search_var, width=30)
         search_entry.pack(side="left", padx=8)
         search_entry.bind("<KeyRelease>", lambda e: self.refresh())
-        ttk.Button(search_row, text="Экспорт в Excel/CSV", style="Ghost.TButton",
-                   command=self.export).pack(side="right")
+        rbtn(search_row, "Экспорт в Excel/CSV", command=self.export, kind="ghost").pack(side="right")
 
         # список
         columns = ("date", "type", "category", "amount", "note")
@@ -610,9 +773,8 @@ class TransactionsTab(ttk.Frame):
 
         list_btns = tk.Frame(self, bg=BG)
         list_btns.pack(fill="x", pady=8)
-        ttk.Button(list_btns, text="Изменить выбранное", command=self.load_selected_for_edit).pack(side="left")
-        ttk.Button(list_btns, text="Удалить выбранное", style="Danger.TButton",
-                   command=self.delete_selected).pack(side="left", padx=8)
+        rbtn(list_btns, "Изменить выбранное", command=self.load_selected_for_edit, kind="ghost").pack(side="left")
+        rbtn(list_btns, "Удалить выбранное", command=self.delete_selected, kind="danger").pack(side="left", padx=8)
 
         self._reload_categories()
 
@@ -736,28 +898,29 @@ class CategoriesTab(ttk.Frame):
     def _build(self):
         top = tk.Frame(self, bg=BG)
         top.pack(fill="x", pady=(6, 10))
-        ttk.Button(top, text="+ Новая категория расходов", command=lambda: self.open_dialog("expense")).pack(side="left")
-        ttk.Button(top, text="+ Новая категория дохода", style="Ghost.TButton",
-                   command=lambda: self.open_dialog("income")).pack(side="left", padx=8)
+        rbtn(top, "+ Новая категория расходов", command=lambda: self.open_dialog("expense"),
+             kind="primary").pack(side="left")
+        rbtn(top, "+ Новая категория дохода", command=lambda: self.open_dialog("income"),
+             kind="ghost").pack(side="left", padx=8)
 
         cols = tk.Frame(self, bg=BG)
         cols.pack(fill="both", expand=True)
         cols.columnconfigure(0, weight=1)
         cols.columnconfigure(1, weight=1)
 
-        self.expense_card = tk.Frame(cols, bg=SURFACE, highlightbackground=LINE, highlightthickness=1)
+        self.expense_card = RoundedCard(cols, radius=16)
         self.expense_card.grid(row=0, column=0, sticky="nsew", padx=(0, 8))
-        ttk.Label(self.expense_card, text="Расходы", style="Card.TLabel", font=("Georgia", 11, "bold")).pack(
-            anchor="w", padx=12, pady=(10, 4))
-        self.expense_rows = tk.Frame(self.expense_card, bg=SURFACE)
-        self.expense_rows.pack(fill="both", expand=True, padx=12, pady=(0, 10))
+        ttk.Label(self.expense_card.body, text="Расходы", style="Card.TLabel",
+                  font=("Georgia", 12, "bold")).pack(anchor="w", pady=(0, 6))
+        self.expense_rows = tk.Frame(self.expense_card.body, bg=SURFACE)
+        self.expense_rows.pack(fill="both", expand=True)
 
-        self.income_card = tk.Frame(cols, bg=SURFACE, highlightbackground=LINE, highlightthickness=1)
+        self.income_card = RoundedCard(cols, radius=16)
         self.income_card.grid(row=0, column=1, sticky="nsew", padx=(8, 0))
-        ttk.Label(self.income_card, text="Доходы", style="Card.TLabel", font=("Georgia", 11, "bold")).pack(
-            anchor="w", padx=12, pady=(10, 4))
-        self.income_rows = tk.Frame(self.income_card, bg=SURFACE)
-        self.income_rows.pack(fill="both", expand=True, padx=12, pady=(0, 10))
+        ttk.Label(self.income_card.body, text="Доходы", style="Card.TLabel",
+                  font=("Georgia", 12, "bold")).pack(anchor="w", pady=(0, 6))
+        self.income_rows = tk.Frame(self.income_card.body, bg=SURFACE)
+        self.income_rows.pack(fill="both", expand=True)
 
     def open_dialog(self, fixed_type, category=None):
         CategoryDialog(self, self.app, category=category, fixed_type=fixed_type)
@@ -774,10 +937,9 @@ class CategoriesTab(ttk.Frame):
         if category["type"] == "expense":
             sub = f"{fmt_money(spent)} из {fmt_money(category['limit_amount'])}" if category["limit_amount"] > 0 else "лимит не задан"
             ttk.Label(info, text=sub, style="Card.TLabel", foreground=INK_DIM, font=("Consolas", 8)).pack(anchor="w")
-        ttk.Button(row, text="✎", width=3, style="Ghost.TButton",
-                   command=lambda: self.open_dialog(category["type"], category)).pack(side="right", padx=2)
-        ttk.Button(row, text="🗑", width=3, style="Danger.TButton",
-                   command=lambda: self.delete(category["id"])).pack(side="right", padx=2)
+        icon_button(row, "🗑", command=lambda: self.delete(category["id"]), kind="danger").pack(side="right", padx=2)
+        icon_button(row, "✎", command=lambda: self.open_dialog(category["type"], category),
+                    kind="ghost").pack(side="right", padx=2)
 
     def delete(self, cat_id):
         if messagebox.askyesno("Удаление", "Удалить категорию? Операции с ней останутся без категории."):
@@ -816,7 +978,7 @@ class SavingsTab(ttk.Frame):
         top.pack(fill="x", pady=(6, 10))
         self.total_label = ttk.Label(top, text="", background=BG, foreground=GOLD, font=("Consolas", 13, "bold"))
         self.total_label.pack(side="left")
-        ttk.Button(top, text="+ Новая копилка", command=lambda: GoalDialog(self, self.app)).pack(side="right")
+        rbtn(top, "+ Новая копилка", command=lambda: GoalDialog(self, self.app), kind="primary").pack(side="right")
 
         self.list_frame = tk.Frame(self, bg=BG)
         self.list_frame.pack(fill="both", expand=True)
@@ -831,21 +993,21 @@ class SavingsTab(ttk.Frame):
             ttk.Label(self.list_frame, text="Пока нет накоплений — создайте первую цель выше.",
                       background=BG, foreground=INK_DIM).pack(pady=20)
         for g in savings:
-            card = tk.Frame(self.list_frame, bg=SURFACE, highlightbackground=LINE, highlightthickness=1)
+            card = RoundedCard(self.list_frame, radius=16)
             card.pack(fill="x", pady=6)
-            head = tk.Frame(card, bg=SURFACE)
-            head.pack(fill="x", padx=12, pady=(10, 4))
-            ttk.Label(head, text=g["name"], style="Card.TLabel", font=("Georgia", 11, "bold")).pack(side="left")
-            ttk.Button(head, text="✎ цель", style="Ghost.TButton",
-                       command=lambda g=g: GoalDialog(self, self.app, g)).pack(side="right")
-            ttk.Button(head, text="🗑", width=3, style="Danger.TButton",
-                       command=lambda g=g: self.delete(g["id"])).pack(side="right", padx=6)
-            make_bar(card, g["current"], g["target"], GOLD, width=520, height=8).pack(fill="x", padx=12)
-            nums = tk.Frame(card, bg=SURFACE)
-            nums.pack(fill="x", padx=12, pady=(4, 10))
+            body = card.body
+            head = tk.Frame(body, bg=SURFACE)
+            head.pack(fill="x", pady=(0, 4))
+            ttk.Label(head, text=g["name"], style="Card.TLabel", font=("Georgia", 12, "bold")).pack(side="left")
+            icon_button(head, "🗑", command=lambda g=g: self.delete(g["id"]), kind="danger").pack(side="right", padx=(6, 0))
+            rbtn(head, "✎ цель", command=lambda g=g: GoalDialog(self, self.app, g), kind="ghost").pack(side="right")
+            make_bar(body, g["current"], g["target"], GOLD, width=520, height=10).pack(fill="x")
+            nums = tk.Frame(body, bg=SURFACE)
+            nums.pack(fill="x", pady=(6, 0))
             ttk.Label(nums, text=f"{fmt_money(g['current'])} из {fmt_money(g['target'])}",
                       style="Card.TLabel", foreground=INK_DIM, font=("Consolas", 9)).pack(side="left")
-            ttk.Button(nums, text="Пополнить", command=lambda g=g: ContributeDialog(self, self.app, g)).pack(side="right")
+            rbtn(nums, "Пополнить", command=lambda g=g: ContributeDialog(self, self.app, g),
+                 kind="primary").pack(side="right")
 
     def delete(self, goal_id):
         if messagebox.askyesno("Удаление", "Удалить копилку и историю пополнений?"):
@@ -872,10 +1034,10 @@ class RecurringTab(ttk.Frame):
         )
         info.pack(fill="x", pady=(6, 10))
 
-        form = tk.Frame(self, bg=SURFACE, highlightbackground=LINE, highlightthickness=1)
-        form.pack(fill="x", pady=(0, 12))
-        row = tk.Frame(form, bg=SURFACE)
-        row.pack(fill="x", padx=12, pady=12)
+        form_card = RoundedCard(self, radius=16)
+        form_card.pack(fill="x", pady=(0, 12))
+        row = tk.Frame(form_card.body, bg=SURFACE)
+        row.pack(fill="x")
 
         self.type_var = tk.StringVar(value="expense")
         seg = tk.Frame(row, bg=SURFACE)
@@ -904,7 +1066,7 @@ class RecurringTab(ttk.Frame):
         self.note_var = tk.StringVar()
         ttk.Entry(row, textvariable=self.note_var, width=20).grid(row=1, column=4, sticky="w")
 
-        ttk.Button(row, text="+ Добавить", command=self.submit).grid(row=1, column=5, padx=(12, 0))
+        rbtn(row, "+ Добавить", command=self.submit, kind="primary").grid(row=1, column=5, padx=(12, 0))
 
         columns = ("type", "amount", "day", "category", "note")
         self.tree = ttk.Treeview(self, columns=columns, show="headings", height=10)
@@ -914,8 +1076,7 @@ class RecurringTab(ttk.Frame):
             self.tree.column(col, width=120, anchor="w")
         self.tree.pack(fill="both", expand=True)
 
-        ttk.Button(self, text="Удалить выбранное", style="Danger.TButton",
-                   command=self.delete_selected).pack(anchor="w", pady=8)
+        rbtn(self, "Удалить выбранное", command=self.delete_selected, kind="danger").pack(anchor="w", pady=8)
 
         self._reload_categories()
 
@@ -982,19 +1143,18 @@ class ReceiptsTab(ttk.Frame):
 
         top = tk.Frame(self, bg=BG)
         top.pack(fill="x", pady=(0, 10))
-        self.upload_btn = ttk.Button(top, text="📎 Загрузить чек", command=self.upload)
+        self.upload_btn = rbtn(top, "📎 Загрузить чек", command=self.upload, kind="primary")
         self.upload_btn.pack(side="left")
-        ttk.Button(top, text="⚙ Настройки распознавания", style="Ghost.TButton",
-                   command=self.open_settings).pack(side="left", padx=8)
+        rbtn(top, "⚙ Настройки распознавания", command=self.open_settings, kind="ghost").pack(side="left", padx=8)
         self.status_var = tk.StringVar(value="")
         ttk.Label(top, textvariable=self.status_var, background=BG, foreground=GOLD).pack(side="left", padx=12)
 
-        history_card = tk.Frame(self, bg=SURFACE, highlightbackground=LINE, highlightthickness=1)
+        history_card = RoundedCard(self, radius=16)
         history_card.pack(fill="both", expand=True)
-        ttk.Label(history_card, text="Загруженные чеки", style="Card.TLabel",
-                  font=("Georgia", 11, "bold")).pack(anchor="w", padx=12, pady=(10, 6))
-        self.history_rows = tk.Frame(history_card, bg=SURFACE)
-        self.history_rows.pack(fill="both", expand=True, padx=12, pady=(0, 12))
+        ttk.Label(history_card.body, text="Загруженные чеки", style="Card.TLabel",
+                  font=("Georgia", 12, "bold")).pack(anchor="w", pady=(0, 6))
+        self.history_rows = tk.Frame(history_card.body, bg=SURFACE)
+        self.history_rows.pack(fill="both", expand=True)
 
         self.refresh()
 
@@ -1067,8 +1227,8 @@ class ReceiptsTab(ttk.Frame):
             row = tk.Frame(self.history_rows, bg=SURFACE)
             row.pack(fill="x", pady=3)
             ttk.Label(row, text=f, style="Card.TLabel", font=("Consolas", 9)).pack(side="left")
-            ttk.Button(row, text="Открыть", style="Ghost.TButton", width=10,
-                       command=lambda f=f: self._open_file(os.path.join(receipts_dir, f))).pack(side="right")
+            rbtn(row, "Открыть", command=lambda f=f: self._open_file(os.path.join(receipts_dir, f)),
+                 kind="ghost").pack(side="right")
 
     def _open_file(self, path):
         try:
@@ -1099,13 +1259,11 @@ class YearReportTab(ttk.Frame):
 
         nav = tk.Frame(outer, bg=BG)
         nav.pack(fill="x", pady=(0, 10))
-        ttk.Button(nav, text="◀", width=3, style="Ghost.TButton",
-                   command=lambda: self.change_year(-1)).pack(side="left")
+        icon_button(nav, "◀", command=lambda: self.change_year(-1), kind="ghost").pack(side="left")
         self.year_var = tk.StringVar(value=str(self.year))
         ttk.Label(nav, textvariable=self.year_var, font=("Consolas", 12),
                   background=BG, foreground=INK_DIM, width=10, anchor="center").pack(side="left", padx=8)
-        ttk.Button(nav, text="▶", width=3, style="Ghost.TButton",
-                   command=lambda: self.change_year(1)).pack(side="left")
+        icon_button(nav, "▶", command=lambda: self.change_year(1), kind="ghost").pack(side="left")
 
         # сводка за год
         self.summary_frame = tk.Frame(outer, bg=BG)
@@ -1117,32 +1275,32 @@ class YearReportTab(ttk.Frame):
         body.columnconfigure(1, weight=1)
 
         # расходы по категориям за год
-        self.category_card = tk.Frame(body, bg=SURFACE, highlightbackground=LINE, highlightthickness=1)
+        self.category_card = RoundedCard(body, radius=16)
         self.category_card.grid(row=0, column=0, sticky="nsew", padx=(0, 8), pady=6)
-        ttk.Label(self.category_card, text="Расходы по категориям за год", style="Card.TLabel",
-                  font=("Georgia", 11, "bold")).pack(anchor="w", padx=12, pady=(10, 6))
-        self.category_rows = tk.Frame(self.category_card, bg=SURFACE)
-        self.category_rows.pack(fill="both", expand=True, padx=12, pady=(0, 12))
+        ttk.Label(self.category_card.body, text="Расходы по категориям за год", style="Card.TLabel",
+                  font=("Georgia", 12, "bold")).pack(anchor="w", pady=(0, 6))
+        self.category_rows = tk.Frame(self.category_card.body, bg=SURFACE)
+        self.category_rows.pack(fill="both", expand=True)
 
         # круговая диаграмма за год
-        pie_card = tk.Frame(body, bg=SURFACE, highlightbackground=LINE, highlightthickness=1)
+        pie_card = RoundedCard(body, radius=16)
         pie_card.grid(row=0, column=1, sticky="nsew", padx=(8, 0), pady=6)
-        ttk.Label(pie_card, text="Доля расходов за год", style="Card.TLabel",
-                  font=("Georgia", 11, "bold")).pack(anchor="w", padx=12, pady=(10, 0))
+        ttk.Label(pie_card.body, text="Доля расходов за год", style="Card.TLabel",
+                  font=("Georgia", 12, "bold")).pack(anchor="w")
         self.pie_fig = Figure(figsize=(4, 3), dpi=90, facecolor=SURFACE)
         self.pie_ax = self.pie_fig.add_subplot(111)
-        self.pie_canvas = FigureCanvasTkAgg(self.pie_fig, master=pie_card)
-        self.pie_canvas.get_tk_widget().pack(fill="both", expand=True, padx=6, pady=6)
+        self.pie_canvas = FigureCanvasTkAgg(self.pie_fig, master=pie_card.body)
+        self.pie_canvas.get_tk_widget().pack(fill="both", expand=True)
 
         # доходы/расходы по месяцам за весь год
-        chart_card = tk.Frame(outer, bg=SURFACE, highlightbackground=LINE, highlightthickness=1)
+        chart_card = RoundedCard(outer, radius=16)
         chart_card.pack(fill="both", expand=True, pady=(10, 0))
-        ttk.Label(chart_card, text="Доходы и расходы по месяцам", style="Card.TLabel",
-                  font=("Georgia", 11, "bold")).pack(anchor="w", padx=12, pady=(10, 0))
+        ttk.Label(chart_card.body, text="Доходы и расходы по месяцам", style="Card.TLabel",
+                  font=("Georgia", 12, "bold")).pack(anchor="w")
         self.trend_fig = Figure(figsize=(6, 2.6), dpi=90, facecolor=SURFACE)
         self.trend_ax = self.trend_fig.add_subplot(111)
-        self.trend_canvas = FigureCanvasTkAgg(self.trend_fig, master=chart_card)
-        self.trend_canvas.get_tk_widget().pack(fill="both", expand=True, padx=6, pady=6)
+        self.trend_canvas = FigureCanvasTkAgg(self.trend_fig, master=chart_card.body)
+        self.trend_canvas.get_tk_widget().pack(fill="both", expand=True)
 
     def change_year(self, delta):
         self.year += delta
@@ -1159,19 +1317,22 @@ class YearReportTab(ttk.Frame):
         for w in self.summary_frame.winfo_children():
             w.destroy()
         cards = [
-            ("Доход за год", income, INCOME),
-            ("Расход за год", expense, EXPENSE),
-            ("Баланс за год", balance, GOLD if balance >= 0 else DANGER),
-            ("Средний расход в месяц", expense / 12, INK_DIM),
+            ("💰", "Доход за год", income, INCOME),
+            ("💸", "Расход за год", expense, EXPENSE),
+            ("⚖", "Баланс за год", balance, GOLD if balance >= 0 else DANGER),
+            ("📊", "Средний расход в месяц", expense / 12, INK_DIM),
         ]
-        for i, (label, value, color) in enumerate(cards):
-            card = tk.Frame(self.summary_frame, bg=SURFACE, highlightbackground=LINE, highlightthickness=1)
-            card.grid(row=0, column=i, sticky="ew", padx=(0 if i == 0 else 6, 0))
+        for i, (icon, label, value, color) in enumerate(cards):
+            card = RoundedCard(self.summary_frame, radius=16, pad=14)
+            card.grid(row=0, column=i, sticky="ew", padx=(0 if i == 0 else 8, 0))
             self.summary_frame.columnconfigure(i, weight=1)
-            ttk.Label(card, text=label, style="Card.TLabel", foreground=INK_DIM,
-                      font=("Segoe UI", 9)).pack(anchor="w", padx=12, pady=(10, 0))
-            ttk.Label(card, text=fmt_money(value), background=SURFACE, foreground=color,
-                      font=("Consolas", 15, "bold")).pack(anchor="w", padx=12, pady=(0, 10))
+            head = tk.Frame(card.body, bg=SURFACE)
+            head.pack(anchor="w", fill="x")
+            ttk.Label(head, text=icon, background=SURFACE, font=("Segoe UI", 12)).pack(side="left", padx=(0, 6))
+            ttk.Label(head, text=label, style="Card.TLabel", foreground=INK_DIM,
+                      font=("Segoe UI", 9)).pack(side="left")
+            ttk.Label(card.body, text=fmt_money(value), background=SURFACE, foreground=color,
+                      font=("Consolas", 15, "bold")).pack(anchor="w", pady=(4, 0))
 
         # расходы по категориям за год
         for w in self.category_rows.winfo_children():
@@ -1322,13 +1483,11 @@ class FinanceApp(tk.Tk):
 
         nav = tk.Frame(self, bg=BG)
         nav.pack(fill="x", padx=20, pady=(0, 10))
-        ttk.Button(nav, text="◀", width=3, style="Ghost.TButton",
-                   command=lambda: self.change_month(-1)).pack(side="left")
+        icon_button(nav, "◀", command=lambda: self.change_month(-1), kind="ghost").pack(side="left")
         self.month_var = tk.StringVar(value=month_label(self.current_month))
         ttk.Label(nav, textvariable=self.month_var, font=("Consolas", 12),
                   background=BG, foreground=INK_DIM, width=20, anchor="center").pack(side="left", padx=8)
-        ttk.Button(nav, text="▶", width=3, style="Ghost.TButton",
-                   command=lambda: self.change_month(1)).pack(side="left")
+        icon_button(nav, "▶", command=lambda: self.change_month(1), kind="ghost").pack(side="left")
 
         self.notebook = ttk.Notebook(self)
         self.notebook.pack(fill="both", expand=True, padx=20, pady=(0, 16))
