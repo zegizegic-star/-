@@ -7,3 +7,4 @@ finance_data.db
 backups/
 receipts/
 receipt_config.json
+app_lock.json
