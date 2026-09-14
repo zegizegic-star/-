@@ -16,6 +16,8 @@ from datetime import datetime
 import requests
 from PIL import Image
 
+import bank_import
+
 API_URL = "https://api.openai.com/v1/chat/completions"
 DEFAULT_MODEL = "gpt-5.6-sol"
 MAX_IMAGE_SIDE = 1568  # с запасом хватает для чёткого чтения чека, но не раздувает запрос
@@ -203,11 +205,15 @@ def _valid_iso_date(s):
         return None
 
 
-def analyze_statement(headers, rows, api_key, model=None, timeout=120):
+def analyze_statement(headers, rows, api_key, model=None, timeout=120, skip_self_transfers=True):
     """Отправляет банковскую выписку (уже прочитанную как таблица) в OpenAI
 
-    и возвращает список операций: [{"date": "ГГГГ-ММ-ДД", "amount": float, "note": str}, ...]
-    (amount положительный — доход, отрицательный — расход).
+    и возвращает (parsed, truncated, self_transfers):
+    parsed — список операций [{"date": "ГГГГ-ММ-ДД", "amount": float, "note": str}, ...]
+    (amount положительный — доход, отрицательный — расход);
+    truncated — True, если выписка была слишком большой и часть строк не отправлялась;
+    self_transfers — сколько операций похоже на переводы между своими счетами
+    (если skip_self_transfers=True, они уже не входят в parsed).
     Бросает ReceiptError с понятным русским сообщением при любой проблеме.
     """
     if not api_key:
@@ -231,6 +237,14 @@ def analyze_statement(headers, rows, api_key, model=None, timeout=120):
         "Пропускай строки, которые не являются отдельной операцией (итоги, остатки, "
         "пустые строки, повторы заголовка).\n\n" + table_text
     )
+
+    if skip_self_transfers:
+        prompt += (
+            "\n\nВАЖНО: не включай в список операции, которые являются переводом "
+            "между собственными счетами того же клиента (например, «перевод между "
+            "счетами одного клиента», «внутрибанковский перевод», пополнение своего "
+            "же счёта/карты) — это не реальный доход и не реальный расход."
+        )
 
     tool_schema = {
         "type": "function",
@@ -305,6 +319,7 @@ def analyze_statement(headers, rows, api_key, model=None, timeout=120):
         raise ReceiptError("Не удалось разобрать выписку — не получилось прочитать ответ модели.")
 
     parsed = []
+    self_transfers = 0
     for item in fields.get("transactions") or []:
         date_val = _valid_iso_date(item.get("date"))
         try:
@@ -313,9 +328,13 @@ def analyze_statement(headers, rows, api_key, model=None, timeout=120):
             amount_val = None
         if date_val is None or not amount_val:
             continue
-        parsed.append({"date": date_val, "amount": amount_val, "note": (item.get("note") or "").strip()})
+        note_val = (item.get("note") or "").strip()
+        if skip_self_transfers and bank_import.looks_like_self_transfer(note_val):
+            self_transfers += 1
+            continue
+        parsed.append({"date": date_val, "amount": amount_val, "note": note_val})
 
     if not parsed:
         raise ReceiptError("Не удалось найти ни одной операции в выписке.")
 
-    return parsed, truncated
+    return parsed, truncated, self_transfers

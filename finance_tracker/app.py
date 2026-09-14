@@ -30,23 +30,23 @@ try:
 except ImportError:
     HAS_OPENPYXL = False
 
-# ---------------- палитра ----------------
-BG = "#0B0D12"
-SURFACE = "#151822"
-SURFACE2 = "#1C202B"
-LINE = "#242835"
-INK = "#F3F4F7"
-INK_DIM = "#8A90A3"
-INK_FAINT = "#565D6E"
-ACCENT = "#6C8CFF"
-ACCENT_SOFT = "#1B2036"
-INCOME = "#34D399"
-EXPENSE = "#FF6B6B"
-GOLD = "#F2B84B"
+# ---------------- палитра (светлая тема) ----------------
+BG = "#F6F7FB"
+SURFACE = "#FFFFFF"
+SURFACE2 = "#EEF0F6"
+LINE = "#E1E4EC"
+INK = "#1B1E27"
+INK_DIM = "#666C7C"
+INK_FAINT = "#9AA0AF"
+ACCENT = "#3D5AFE"
+ACCENT_SOFT = "#E8ECFF"
+INCOME = "#15964A"
+EXPENSE = "#D33A3A"
+GOLD = "#B45309"
 DANGER = EXPENSE
 
-PALETTE = ["#8AA2E8", "#F2B84B", "#7FC4C0", "#E8899A", "#BD6357",
-           "#8AA9A5", "#D8C468", "#B992C9", "#7FA3C0", "#A78BFA"]
+PALETTE = ["#4C6FFF", "#D18A2A", "#2F9E8F", "#C2597A", "#A8503F",
+           "#4E8E88", "#B79A2E", "#8B5FA6", "#3E6E93", "#7857C9"]
 
 FONT_UI = "Segoe UI"
 FONT_MONO = "Consolas"
@@ -778,6 +778,12 @@ class BankImportDialog(tk.Toplevel):
         ttk.Checkbutton(opts_row, text="Отрицательные суммы — это расход",
                         variable=self.negative_is_expense).pack(side="left")
 
+        opts_row2 = tk.Frame(self, bg=SURFACE)
+        opts_row2.pack(fill="x", padx=14, pady=(0, 6))
+        self.skip_self_transfers = tk.BooleanVar(value=True)
+        ttk.Checkbutton(opts_row2, text="Пропускать переводы между своими счетами",
+                        variable=self.skip_self_transfers).pack(side="left")
+
         acc_row = tk.Frame(self, bg=SURFACE)
         acc_row.pack(fill="x", padx=14, pady=6)
         ttk.Label(acc_row, text="Зачислить на счёт:", style="Card.TLabel").pack(side="left")
@@ -838,12 +844,16 @@ class BankImportDialog(tk.Toplevel):
             acol = None
         ncol = self.headers.index(self.note_var.get()) if self.note_var.get() in self.headers else None
         try:
-            parsed, skipped = bank_import.parse_rows(self.rows, dcol, acol, ncol)
+            parsed, skipped, self_transfers = bank_import.parse_rows(
+                self.rows, dcol, acol, ncol, skip_self_transfers=self.skip_self_transfers.get())
         except bank_import.BankImportError as e:
             messagebox.showerror("Ошибка", str(e))
             return
         self.parsed = parsed
-        self.status_var.set(f"Разобрано операций: {len(parsed)}, пропущено строк: {skipped}.")
+        msg = f"Разобрано операций: {len(parsed)}, пропущено строк: {skipped}."
+        if self_transfers:
+            msg += f" Пропущено переводов между своими счетами: {self_transfers}."
+        self.status_var.set(msg)
         self.import_btn.configure(state="normal")
 
     def parse_with_ai(self):
@@ -862,9 +872,12 @@ class BankImportDialog(tk.Toplevel):
         headers, rows = self.headers, self.rows
         result_box = {}
 
+        skip_self = self.skip_self_transfers.get()
+
         def worker():
             try:
-                result_box["data"] = receipts.analyze_statement(headers, rows, cfg["api_key"], cfg["model"])
+                result_box["data"] = receipts.analyze_statement(
+                    headers, rows, cfg["api_key"], cfg["model"], skip_self_transfers=skip_self)
             except receipts.ReceiptError as e:
                 result_box["error"] = str(e)
             except Exception as e:
@@ -883,9 +896,11 @@ class BankImportDialog(tk.Toplevel):
             self.status_var.set("")
             messagebox.showerror("Не удалось распознать выписку", result_box["error"])
             return
-        parsed, truncated = result_box["data"]
+        parsed, truncated, self_transfers = result_box["data"]
         self.parsed = parsed
         msg = f"ИИ распознал операций: {len(parsed)}."
+        if self_transfers:
+            msg += f" Пропущено переводов между своими счетами: {self_transfers}."
         if truncated:
             msg += f" Файл большой — обработаны только первые {receipts.MAX_STATEMENT_ROWS} строк."
         self.status_var.set(msg)
@@ -1848,7 +1863,7 @@ class RecurringTab(ttk.Frame):
             row=2, column=0, columnspan=6, sticky="w", pady=(10, 0))
 
         columns = ("type", "amount", "day", "category", "account", "note")
-        self.tree = ttk.Treeview(self, columns=columns, show="headings", height=10)
+        self.tree = ttk.Treeview(self, columns=columns, show="headings", height=5)
         headings = {"type": "Тип", "amount": "Сумма", "day": "День", "category": "Категория",
                     "account": "Счёт", "note": "Заметка"}
         for col in columns:
@@ -1857,6 +1872,20 @@ class RecurringTab(ttk.Frame):
         self.tree.pack(fill="both", expand=True)
 
         rbtn(self, "Удалить выбранное", command=self.delete_selected, kind="danger").pack(anchor="w", pady=8)
+
+        sub_card = RoundedCard(self, radius=16)
+        sub_card.pack(fill="both", expand=True, pady=(12, 0))
+        tk.Label(sub_card.body, text="🔍 Обнаруженные подписки", bg=SURFACE, fg=INK,
+                 font=(FONT_UI, 12, "bold")).pack(anchor="w")
+        tk.Label(sub_card.body,
+                 text="Программа сама находит расходы, которые повторяются с почти "
+                      "одинаковой суммой — похоже на подписки или другие регулярные платежи.",
+                 bg=SURFACE, fg=INK_DIM, wraplength=760, justify="left").pack(anchor="w", pady=(2, 8))
+        self.sub_total_var = tk.StringVar(value="")
+        ttk.Label(sub_card.body, textvariable=self.sub_total_var, style="Card.TLabel", foreground=GOLD,
+                  font=(FONT_MONO, 12, "bold")).pack(anchor="w", pady=(0, 8))
+        self.sub_rows = tk.Frame(sub_card.body, bg=SURFACE)
+        self.sub_rows.pack(fill="both", expand=True)
 
         self._reload_accounts()
         self._reload_categories()
@@ -1909,6 +1938,45 @@ class RecurringTab(ttk.Frame):
                 "Доход" if r["type"] == "income" else "Расход", fmt_money(r["amount"]), r["day_of_month"],
                 r["category_name"] or "—", acc["name"] if acc else "—", r["note"] or ""
             ))
+        self._refresh_subscriptions()
+
+    def _refresh_subscriptions(self):
+        for w in self.sub_rows.winfo_children():
+            w.destroy()
+        subs = self.app.db.get_recurring_expenses()
+        if not subs:
+            self.sub_total_var.set("")
+            ttk.Label(self.sub_rows,
+                      text="Пока не найдено повторяющихся расходов (нужно хотя бы 2 похожих платежа).",
+                      style="Card.TLabel", foreground=INK_DIM).pack(anchor="w", pady=6)
+            return
+        monthly_total = sum(s["monthly_equiv"] for s in subs)
+        self.sub_total_var.set(f"Похоже на ≈{fmt_money(monthly_total)} в месяц суммарно")
+        for s in subs[:8]:
+            row = tk.Frame(self.sub_rows, bg=SURFACE)
+            row.pack(fill="x", pady=3)
+            ttk.Label(row, text=s["note"][:40], style="Card.TLabel", width=32, anchor="w").pack(side="left")
+            ttk.Label(row, text=f'{fmt_money(s["avg_amount"])} · {s["count"]}x · '
+                                 f'~раз в {round(s["avg_interval_days"])} дн.',
+                      style="Card.TLabel", foreground=INK_DIM, width=32, anchor="w").pack(side="left")
+            rbtn(row, "+ В регулярные", command=lambda s=s: self._promote(s), kind="ghost").pack(side="left")
+
+    def _promote(self, s):
+        self.type_var.set("expense")
+        self._reload_categories()
+        self.amount_var.set(f"{s['avg_amount']:.0f}")
+        try:
+            day = min(28, datetime.strptime(s["last_date"], "%Y-%m-%d").day)
+        except ValueError:
+            day = 1
+        self.day_var.set(str(day))
+        self.note_var.set(s["note"])
+        cat_id = self.app.db.get_category_for_note(s["note"], "expense")
+        if cat_id:
+            cat = self.app.db.get_category(cat_id)
+            if cat:
+                self.category_var.set(cat["name"])
+        messagebox.showinfo("Готово", "Форма выше заполнена данными подписки — проверьте и нажмите «+ Добавить».")
 
 
 # =================================================================

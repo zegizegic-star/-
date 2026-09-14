@@ -99,6 +99,32 @@ def parse_date(raw):
     return None
 
 
+SELF_TRANSFER_KEYWORDS = [
+    "перевод между счетами",
+    "перевод между своими счетами",
+    "внутрибанковский перевод",
+    "перевод со своего счета",
+    "перевод со своего счёта",
+    "перевод на свой счет",
+    "перевод на свой счёт",
+    "перевод между картами",
+    "пополнение своего счета",
+    "пополнение своего счёта",
+]
+
+
+def looks_like_self_transfer(note):
+    """Грубая эвристика: похоже ли описание операции на перевод между своими же счетами
+
+    (а не реальный доход/расход). Основана на типичных формулировках банков —
+    не идеальна, но ловит самый частый источник "шума" в статистике при импорте.
+    """
+    n = (note or "").strip().lower()
+    if not n:
+        return False
+    return any(kw in n for kw in SELF_TRANSFER_KEYWORDS)
+
+
 def guess_columns(headers):
     """Возвращает (date_col, amount_col, note_col) — любой может быть None."""
     return (
@@ -108,12 +134,19 @@ def guess_columns(headers):
     )
 
 
-def parse_rows(rows, date_col, amount_col, note_col):
-    """Разбирает уже прочитанные строки по заданным номерам колонок."""
+def parse_rows(rows, date_col, amount_col, note_col, skip_self_transfers=True):
+    """Разбирает уже прочитанные строки по заданным номерам колонок.
+
+    Возвращает (parsed, skipped, self_transfers) — skipped считает строки,
+    которые не удалось разобрать вообще, self_transfers — операции, похожие
+    на переводы между своими счетами (если skip_self_transfers=True, они не
+    попадают в parsed).
+    """
     if date_col is None or amount_col is None:
         raise BankImportError("Не выбраны колонки с датой и суммой.")
     parsed = []
     skipped = 0
+    self_transfers = 0
     for row in rows:
         if date_col >= len(row) or amount_col >= len(row):
             skipped += 1
@@ -124,7 +157,10 @@ def parse_rows(rows, date_col, amount_col, note_col):
             skipped += 1
             continue
         note_val = row[note_col].strip() if note_col is not None and note_col < len(row) else ""
+        if skip_self_transfers and looks_like_self_transfer(note_val):
+            self_transfers += 1
+            continue
         parsed.append({"date": date_val, "amount": amount_val, "note": note_val})
     if not parsed:
         raise BankImportError("Не удалось разобрать ни одной операции — проверьте выбранные колонки.")
-    return parsed, skipped
+    return parsed, skipped, self_transfers

@@ -389,6 +389,56 @@ class Database:
         )
         return cur.fetchall()
 
+    def get_recurring_expenses(self, min_count=2, amount_tolerance=0.15):
+        """Ищет вероятные подписки/регулярные списания среди уже сохранённых расходов:
+
+        операции с одинаковой (после обрезки пробелов, без учёта регистра) заметкой,
+        повторяющиеся минимум min_count раз с почти одинаковой суммой (в пределах
+        amount_tolerance от среднего). Возвращает список словарей, отсортированный
+        по убыванию оценки стоимости в месяц:
+        {note, count, avg_amount, last_date, avg_interval_days, monthly_equiv}.
+        """
+        cur = self.conn.cursor()
+        cur.execute(
+            "SELECT amount, date, note FROM transactions "
+            "WHERE type='expense' AND note IS NOT NULL AND TRIM(note) != ''"
+        )
+        groups = {}
+        for row in cur.fetchall():
+            key = row["note"].strip().lower()
+            g = groups.setdefault(key, {"label": row["note"].strip(), "amounts": [], "dates": []})
+            g["amounts"].append(row["amount"])
+            g["dates"].append(row["date"])
+
+        result = []
+        for g in groups.values():
+            amounts = g["amounts"]
+            count = len(amounts)
+            if count < min_count:
+                continue
+            avg_amount = sum(amounts) / count
+            if avg_amount <= 0:
+                continue
+            if (max(amounts) - min(amounts)) / avg_amount > amount_tolerance:
+                continue
+            dates_sorted = sorted(g["dates"])
+            d0 = datetime.strptime(dates_sorted[0], "%Y-%m-%d")
+            d1 = datetime.strptime(dates_sorted[-1], "%Y-%m-%d")
+            span_days = (d1 - d0).days
+            avg_interval_days = span_days / (count - 1) if count > 1 and span_days > 0 else 30
+            monthly_equiv = avg_amount * (30.44 / avg_interval_days)
+            result.append({
+                "note": g["label"],
+                "count": count,
+                "avg_amount": avg_amount,
+                "last_date": dates_sorted[-1],
+                "avg_interval_days": avg_interval_days,
+                "monthly_equiv": monthly_equiv,
+            })
+
+        result.sort(key=lambda r: r["monthly_equiv"], reverse=True)
+        return result
+
     # ---------------- savings ----------------
     def get_savings(self):
         cur = self.conn.cursor()
