@@ -19,7 +19,6 @@ from PIL import Image, ImageDraw, ImageFilter, ImageTk
 
 from database import Database
 import receipts
-import authlock
 import update_check
 import bank_import
 
@@ -727,62 +726,6 @@ class TransferDialog(tk.Toplevel):
         self.app.db.add_transfer(from_id, to_id, amount, d, self.note_var.get().strip())
         self.destroy()
         self.app.refresh_all()
-
-
-class SecurityDialog(tk.Toplevel):
-    """Настройка PIN-кода запуска приложения."""
-
-    def __init__(self, master, app):
-        super().__init__(master)
-        self.app = app
-        self.title("Защита входа")
-        self.configure(bg=SURFACE)
-        self.resizable(False, False)
-        self.transient(master)
-        self.grab_set()
-
-        enabled = authlock.is_enabled(app.receipts_base_dir)
-        pad = {"padx": 14, "pady": 6}
-        ttk.Label(
-            self,
-            text=("PIN-код нужно будет вводить при каждом запуске программы.\n"
-                  "Это не шифрование — если забудете PIN, удалите файл\n"
-                  "app_lock.json рядом с программой, чтобы снять защиту."),
-            style="Card.TLabel", foreground=INK_DIM, justify="left",
-        ).pack(anchor="w", **pad)
-
-        ttk.Label(self, text="Новый PIN (пусто — оставить как есть)", style="Card.TLabel").pack(anchor="w", **pad)
-        self.pin_var = tk.StringVar()
-        ttk.Entry(self, textvariable=self.pin_var, show="•", width=24).pack(padx=14)
-
-        ttk.Label(self, text="Повторите PIN", style="Card.TLabel").pack(anchor="w", **pad)
-        self.pin2_var = tk.StringVar()
-        ttk.Entry(self, textvariable=self.pin2_var, show="•", width=24).pack(padx=14)
-
-        btn_row = tk.Frame(self, bg=SURFACE)
-        btn_row.pack(pady=14)
-        rbtn(btn_row, "Сохранить PIN", command=self.save, kind="primary").pack(side="left", padx=6)
-        if enabled:
-            rbtn(btn_row, "Убрать защиту", command=self.remove, kind="danger").pack(side="left", padx=6)
-        rbtn(btn_row, "Отмена", command=self.destroy, kind="ghost").pack(side="left", padx=6)
-
-    def save(self):
-        pin = self.pin_var.get().strip()
-        pin2 = self.pin2_var.get().strip()
-        if not pin:
-            messagebox.showwarning("Проверка", "Введите PIN-код")
-            return
-        if pin != pin2:
-            messagebox.showwarning("Проверка", "PIN-коды не совпадают")
-            return
-        authlock.set_pin(self.app.receipts_base_dir, pin)
-        messagebox.showinfo("Готово", "PIN-код установлен. Он потребуется при следующем запуске.")
-        self.destroy()
-
-    def remove(self):
-        authlock.remove_pin(self.app.receipts_base_dir)
-        messagebox.showinfo("Готово", "Защита входа отключена.")
-        self.destroy()
 
 
 class BankImportDialog(tk.Toplevel):
@@ -2206,53 +2149,6 @@ class YearReportTab(ttk.Frame):
 
 
 # =================================================================
-# Экран входа по PIN-коду (перед созданием главного окна)
-# =================================================================
-
-def prompt_pin(base_dir):
-    """Показывает окно ввода PIN. Возвращает True, если код верный или защита выключена."""
-    if not authlock.is_enabled(base_dir):
-        return True
-
-    result = {"ok": False}
-    win = tk.Tk()
-    win.title("Мои финансы — вход")
-    win.configure(bg=BG)
-    win.resizable(False, False)
-    win.geometry("320x180")
-
-    tk.Label(win, text="Введите PIN-код", bg=BG, fg=INK, font=(FONT_UI, 12, "bold")).pack(pady=(24, 10))
-    pin_var = tk.StringVar()
-    entry = tk.Entry(win, textvariable=pin_var, show="•", justify="center", font=(FONT_UI, 14),
-                      bg=SURFACE2, fg=INK, insertbackground=INK, relief="flat")
-    entry.pack(ipady=6, padx=30, fill="x")
-    entry.focus_set()
-    error_var = tk.StringVar(value="")
-    tk.Label(win, textvariable=error_var, bg=BG, fg=EXPENSE, font=(FONT_UI, 9)).pack(pady=(6, 0))
-
-    def try_ok(event=None):
-        if authlock.check_pin(base_dir, pin_var.get()):
-            result["ok"] = True
-            win.destroy()
-        else:
-            error_var.set("Неверный PIN-код")
-            pin_var.set("")
-
-    def cancel():
-        win.destroy()
-
-    entry.bind("<Return>", try_ok)
-    btn_row = tk.Frame(win, bg=BG)
-    btn_row.pack(pady=16)
-    rbtn(btn_row, "Войти", command=try_ok, kind="primary", parent_bg=BG).pack(side="left", padx=6)
-    rbtn(btn_row, "Отмена", command=cancel, kind="ghost", parent_bg=BG).pack(side="left", padx=6)
-
-    win.protocol("WM_DELETE_WINDOW", cancel)
-    win.mainloop()
-    return result["ok"]
-
-
-# =================================================================
 # Главное окно
 # =================================================================
 
@@ -2379,8 +2275,6 @@ class FinanceApp(tk.Tk):
                               "только по вашему запросу.",
                   bg=SURFACE, fg=INK_FAINT, font=(FONT_UI, 8), wraplength=160, justify="left").pack(
             anchor="w", pady=(0, 8))
-        rbtn(footer, "🔒 Защита входа", command=lambda: SecurityDialog(self, self), kind="ghost",
-             parent_bg=SURFACE).pack(fill="x")
 
         main = tk.Frame(root_row, bg=BG)
         main.pack(side="left", fill="both", expand=True)
@@ -2444,7 +2338,5 @@ class FinanceApp(tk.Tk):
 
 
 if __name__ == "__main__":
-    _base_dir = os.path.dirname(os.path.abspath(sys.executable if getattr(sys, "frozen", False) else __file__))
-    if prompt_pin(_base_dir):
-        app = FinanceApp()
-        app.mainloop()
+    app = FinanceApp()
+    app.mainloop()
