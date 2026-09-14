@@ -395,6 +395,28 @@ def icon_button(parent, symbol, command=None, kind="ghost", size=28, font=None, 
                           radius=size // 2, hpad=0, font=font or (FONT_UI, 11), **kwargs)
 
 
+def add_paste_menu(entry):
+    """Добавляет полю ввода меню правой кнопки мыши (Вырезать/Копировать/Вставить/Выделить всё).
+
+    Tkinter по умолчанию такого меню не показывает (хотя Ctrl+V обычно и так
+    работает) — без него не очевидно, что вставить скопированный текст вообще
+    можно, особенно в длинные значения вроде API-ключа.
+    """
+    menu = tk.Menu(entry, tearoff=0)
+    menu.add_command(label="Вырезать", command=lambda: entry.event_generate("<<Cut>>"))
+    menu.add_command(label="Копировать", command=lambda: entry.event_generate("<<Copy>>"))
+    menu.add_command(label="Вставить", command=lambda: entry.event_generate("<<Paste>>"))
+    menu.add_separator()
+    menu.add_command(label="Выделить всё", command=lambda: entry.select_range(0, "end"))
+
+    def show_menu(event):
+        entry.focus_set()
+        menu.tk_popup(event.x_root, event.y_root)
+
+    entry.bind("<Button-3>", show_menu)
+    return entry
+
+
 class SegmentToggle(tk.Frame):
     """Переключатель из нескольких скруглённых кнопок (например, Расход/Доход)."""
 
@@ -935,7 +957,7 @@ class ReceiptSettingsDialog(tk.Toplevel):
     def __init__(self, master, app):
         super().__init__(master)
         self.app = app
-        self.title("Настройки распознавания чеков")
+        self.title("Настройки распознавания (чеки и выписки)")
         self.configure(bg=SURFACE)
         self.resizable(False, False)
         self.transient(master)
@@ -946,18 +968,26 @@ class ReceiptSettingsDialog(tk.Toplevel):
         pad = {"padx": 14, "pady": 6}
         ttk.Label(self, text="API-ключ OpenAI (GPT)", style="Card.TLabel").pack(anchor="w", **pad)
         self.key_var = tk.StringVar(value=cfg["api_key"])
-        ttk.Entry(self, textvariable=self.key_var, width=44, show="•").pack(padx=14)
+        key_entry = ttk.Entry(self, textvariable=self.key_var, width=44, show="•")
+        key_entry.pack(padx=14)
+        add_paste_menu(key_entry)
 
         ttk.Label(self, text="Модель", style="Card.TLabel").pack(anchor="w", **pad)
         self.model_var = tk.StringVar(value=cfg["model"])
-        ttk.Entry(self, textvariable=self.model_var, width=44).pack(padx=14)
+        model_entry = ttk.Entry(self, textvariable=self.model_var, width=44)
+        model_entry.pack(padx=14)
+        add_paste_menu(model_entry)
 
         ttk.Label(
             self,
-            text="Ключ можно получить на platform.openai.com/api-keys. Он хранится только на этом "
-                 "компьютере, в файле receipt_config.json рядом с программой, и никуда, кроме "
-                 "запросов к OpenAI, не отправляется. Фото чека уходит на сервер распознавания "
-                 "только при нажатии «Загрузить чек».",
+            text="Один и тот же ключ используется и для распознавания чеков (вкладка «Чеки»), "
+                 "и для кнопки «✨ Распознать через ИИ» при импорте банковской выписки — "
+                 "настраивать отдельно для выписок не нужно. Ключ можно получить на "
+                 "platform.openai.com/api-keys. Он хранится только на этом компьютере, в файле "
+                 "receipt_config.json рядом с программой, и никуда, кроме запросов к OpenAI, "
+                 "не отправляется — данные уходят туда только при нажатии «Загрузить чек» или "
+                 "«Распознать через ИИ».\n\nВ это поле можно вставить скопированный ключ через "
+                 "Ctrl+V или через правую кнопку мыши → «Вставить».",
             style="Card.TLabel", foreground=INK_DIM, wraplength=380, justify="left",
         ).pack(padx=14, pady=(10, 6))
 
