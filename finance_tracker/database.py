@@ -426,6 +426,13 @@ class Database:
             d1 = datetime.strptime(dates_sorted[-1], "%Y-%m-%d")
             span_days = (d1 - d0).days
             avg_interval_days = span_days / (count - 1) if count > 1 and span_days > 0 else 30
+            # Интервал короче ~5 дней обычно значит "две случайно похожие покупки
+            # рядом по времени", а не подписку — на таких данных 30.44/interval
+            # даёт нереалистично раздутую оценку в месяц. Требуем хотя бы 3
+            # повторения для таких коротких интервалов, чтобы не поймать совпадение.
+            if avg_interval_days < 5 and count < 3:
+                continue
+            avg_interval_days = max(avg_interval_days, 5)
             monthly_equiv = avg_amount * (30.44 / avg_interval_days)
             result.append({
                 "note": g["label"],

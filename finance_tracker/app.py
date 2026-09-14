@@ -1552,8 +1552,8 @@ class TransactionsTab(ttk.Frame):
             return
         tx_id = int(sel[0])
         path = filedialog.askopenfilename(
-            title="Выберите фото чека",
-            filetypes=[("Изображения", "*.jpg *.jpeg *.png *.webp")],
+            title="Выберите фото или PDF чека",
+            filetypes=[("Изображения и PDF", "*.jpg *.jpeg *.png *.webp *.pdf")],
         )
         if not path:
             return
@@ -2053,8 +2053,8 @@ class ReceiptsTab(ttk.Frame):
 
     def upload(self):
         path = filedialog.askopenfilename(
-            title="Выберите фото чека",
-            filetypes=[("Изображения", "*.jpg *.jpeg *.png *.webp")],
+            title="Выберите фото или PDF чека",
+            filetypes=[("Изображения и PDF", "*.jpg *.jpeg *.png *.webp *.pdf")],
         )
         if not path:
             return

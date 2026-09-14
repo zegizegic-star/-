@@ -23,7 +23,7 @@ DEFAULT_MODEL = "gpt-5.6-sol"
 MAX_IMAGE_SIDE = 1568  # с запасом хватает для чёткого чтения чека, но не раздувает запрос
 MAX_STATEMENT_ROWS = 400  # ограничение, чтобы не раздувать запрос и его стоимость
 
-SUPPORTED_EXTENSIONS = (".jpg", ".jpeg", ".png", ".webp")
+SUPPORTED_EXTENSIONS = (".jpg", ".jpeg", ".png", ".webp", ".pdf")
 
 
 class ReceiptError(Exception):
@@ -55,13 +55,39 @@ def save_config(base_dir, api_key, model):
         json.dump({"api_key": api_key.strip(), "model": (model or DEFAULT_MODEL).strip()}, f, ensure_ascii=False)
 
 
-def _encode_image(image_path):
-    """Уменьшает фото при необходимости и кодирует его в base64 (JPEG)."""
+def _load_pdf_first_page(pdf_path):
+    """Рендерит первую страницу PDF в изображение (для сканов чеков в PDF)."""
     try:
-        img = Image.open(image_path)
-        img = img.convert("RGB")
+        import pymupdf as fitz
+    except ImportError:
+        raise ReceiptError(
+            "Для распознавания PDF-файлов нужна библиотека PyMuPDF — переустановите "
+            "зависимости (pip install -r requirements.txt) и запустите программу заново."
+        )
+    try:
+        doc = fitz.open(pdf_path)
+        if doc.page_count < 1:
+            raise ReceiptError("PDF-файл пустой.")
+        pix = doc[0].get_pixmap(dpi=200)
+        img = Image.frombytes("RGB", (pix.width, pix.height), pix.samples)
+        doc.close()
+    except ReceiptError:
+        raise
     except Exception as e:
-        raise ReceiptError(f"Не удалось открыть изображение: {e}")
+        raise ReceiptError(f"Не удалось прочитать PDF-файл: {e}")
+    return img
+
+
+def _encode_image(image_path):
+    """Уменьшает фото/страницу PDF при необходимости и кодирует в base64 (JPEG)."""
+    if os.path.splitext(image_path)[1].lower() == ".pdf":
+        img = _load_pdf_first_page(image_path)
+    else:
+        try:
+            img = Image.open(image_path)
+            img = img.convert("RGB")
+        except Exception as e:
+            raise ReceiptError(f"Не удалось открыть изображение: {e}")
 
     w, h = img.size
     longest = max(w, h)
