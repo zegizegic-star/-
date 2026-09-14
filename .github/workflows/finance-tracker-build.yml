@@ -31,21 +31,21 @@ jobs:
 
       - name: Build .exe with PyInstaller
         run: |
-          python -m PyInstaller --noconfirm --onefile --windowed --name "МоиФинансы" `
+          python -m PyInstaller --noconfirm --onedir --windowed --name "МоиФинансы" `
             --icon "icon.ico" --add-data "icon.ico;." --collect-data certifi `
             --hidden-import PIL._tkinter_finder app.py
 
       - name: Smoke-test the built exe
         shell: pwsh
         run: |
-          $proc = Start-Process -FilePath "dist\МоиФинансы.exe" -PassThru
+          $proc = Start-Process -FilePath "dist\МоиФинансы\МоиФинансы.exe" -PassThru
           Start-Sleep -Seconds 6
           if ($proc.HasExited) {
             Write-Error "Application exited early with code $($proc.ExitCode)"
             exit 1
           }
           Stop-Process -Id $proc.Id -Force
-          if (-not (Test-Path "dist\finance_data.db")) {
+          if (-not (Test-Path "dist\МоиФинансы\finance_data.db")) {
             Write-Error "finance_data.db was not created next to the exe"
             exit 1
           }
@@ -54,4 +54,4 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           name: MoiFinansy-windows-exe
-          path: finance_tracker/dist/МоиФинансы.exe
+          path: finance_tracker/dist/МоиФинансы/
