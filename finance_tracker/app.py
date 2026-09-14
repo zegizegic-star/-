@@ -794,6 +794,8 @@ class BankImportDialog(tk.Toplevel):
         btn_row = tk.Frame(self, bg=SURFACE)
         btn_row.pack(pady=10)
         rbtn(btn_row, "Разобрать файл", command=self.parse, kind="ghost").pack(side="left", padx=6)
+        self.ai_btn = rbtn(btn_row, "✨ Распознать через ИИ", command=self.parse_with_ai, kind="ghost")
+        self.ai_btn.pack(side="left", padx=6)
         self.import_btn = rbtn(btn_row, "Импортировать", command=self.do_import, kind="primary")
         self.import_btn.pack(side="left", padx=6)
         self.import_btn.configure(state="disabled")
@@ -842,6 +844,51 @@ class BankImportDialog(tk.Toplevel):
             return
         self.parsed = parsed
         self.status_var.set(f"Разобрано операций: {len(parsed)}, пропущено строк: {skipped}.")
+        self.import_btn.configure(state="normal")
+
+    def parse_with_ai(self):
+        if not self.rows:
+            messagebox.showwarning("Проверка", "Сначала выберите файл")
+            return
+        cfg = receipts.load_config(self.app.receipts_base_dir)
+        if not cfg["api_key"]:
+            messagebox.showinfo("Нужен API-ключ",
+                                 "Сначала укажите API-ключ OpenAI в «Настройках распознавания» "
+                                 "(вкладка «Чеки»).")
+            return
+
+        self.ai_btn.configure(state="disabled")
+        self.status_var.set("Распознаём выписку через ИИ, подождите…")
+        headers, rows = self.headers, self.rows
+        result_box = {}
+
+        def worker():
+            try:
+                result_box["data"] = receipts.analyze_statement(headers, rows, cfg["api_key"], cfg["model"])
+            except receipts.ReceiptError as e:
+                result_box["error"] = str(e)
+            except Exception as e:
+                result_box["error"] = f"Неожиданная ошибка: {e}"
+
+        thread = threading.Thread(target=worker, daemon=True)
+        thread.start()
+        self.after(200, lambda: self._poll_ai(thread, result_box))
+
+    def _poll_ai(self, thread, result_box):
+        if thread.is_alive():
+            self.after(200, lambda: self._poll_ai(thread, result_box))
+            return
+        self.ai_btn.configure(state="normal")
+        if "error" in result_box:
+            self.status_var.set("")
+            messagebox.showerror("Не удалось распознать выписку", result_box["error"])
+            return
+        parsed, truncated = result_box["data"]
+        self.parsed = parsed
+        msg = f"ИИ распознал операций: {len(parsed)}."
+        if truncated:
+            msg += f" Файл большой — обработаны только первые {receipts.MAX_STATEMENT_ROWS} строк."
+        self.status_var.set(msg)
         self.import_btn.configure(state="normal")
 
     def do_import(self):

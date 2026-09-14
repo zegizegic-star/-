@@ -11,6 +11,7 @@ import base64
 import io
 import json
 import os
+from datetime import datetime
 
 import requests
 from PIL import Image
@@ -18,6 +19,7 @@ from PIL import Image
 API_URL = "https://api.openai.com/v1/chat/completions"
 DEFAULT_MODEL = "gpt-5.6-sol"
 MAX_IMAGE_SIDE = 1568  # с запасом хватает для чёткого чтения чека, но не раздувает запрос
+MAX_STATEMENT_ROWS = 400  # ограничение, чтобы не раздувать запрос и его стоимость
 
 SUPPORTED_EXTENSIONS = (".jpg", ".jpeg", ".png", ".webp")
 
@@ -191,3 +193,129 @@ def analyze_receipt(image_path, category_names, api_key, model=None, timeout=60)
         "category": category,
         "note": merchant,
     }
+
+
+def _valid_iso_date(s):
+    try:
+        datetime.strptime(s, "%Y-%m-%d")
+        return s
+    except (TypeError, ValueError):
+        return None
+
+
+def analyze_statement(headers, rows, api_key, model=None, timeout=120):
+    """Отправляет банковскую выписку (уже прочитанную как таблица) в OpenAI
+
+    и возвращает список операций: [{"date": "ГГГГ-ММ-ДД", "amount": float, "note": str}, ...]
+    (amount положительный — доход, отрицательный — расход).
+    Бросает ReceiptError с понятным русским сообщением при любой проблеме.
+    """
+    if not api_key:
+        raise ReceiptError("Не указан API-ключ OpenAI. Откройте «Настройки распознавания» и вставьте ключ.")
+    if not rows:
+        raise ReceiptError("В файле нет строк для разбора.")
+
+    truncated = len(rows) > MAX_STATEMENT_ROWS
+    use_rows = rows[:MAX_STATEMENT_ROWS]
+    lines = ["\t".join(str(c) for c in headers)]
+    lines += ["\t".join(str(c) for c in row) for row in use_rows]
+    table_text = "\n".join(lines)
+
+    prompt = (
+        "Ниже — банковская выписка в табличном виде (колонки разделены табуляцией, "
+        "первая строка — заголовки). Извлеки из неё каждую реальную операцию по счёту и "
+        "запиши список вызовом функции record_statement.\n"
+        "Для каждой операции укажи: date (дата операции в формате ГГГГ-ММ-ДД), "
+        "amount (сумма числом; расход — отрицательное число, доход/пополнение — положительное), "
+        "note (краткое описание или назначение платежа, как в выписке).\n"
+        "Пропускай строки, которые не являются отдельной операцией (итоги, остатки, "
+        "пустые строки, повторы заголовка).\n\n" + table_text
+    )
+
+    tool_schema = {
+        "type": "function",
+        "function": {
+            "name": "record_statement",
+            "description": "Записать операции, извлечённые из банковской выписки.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "transactions": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "date": {"type": "string", "description": "Дата операции, ГГГГ-ММ-ДД"},
+                                "amount": {"type": "number", "description": "Сумма; расход отрицательный"},
+                                "note": {"type": "string", "description": "Описание операции"},
+                            },
+                            "required": ["date", "amount"],
+                        },
+                    }
+                },
+                "required": ["transactions"],
+            },
+        },
+    }
+
+    payload = {
+        "model": model or DEFAULT_MODEL,
+        "max_completion_tokens": 8192,
+        "tools": [tool_schema],
+        "tool_choice": {"type": "function", "function": {"name": "record_statement"}},
+        "messages": [{"role": "user", "content": prompt}],
+    }
+
+    headers_http = {
+        "Authorization": f"Bearer {api_key}",
+        "Content-Type": "application/json",
+    }
+
+    try:
+        resp = requests.post(API_URL, headers=headers_http, json=payload, timeout=timeout)
+    except requests.exceptions.Timeout:
+        raise ReceiptError("Сервер не ответил вовремя. Проверьте интернет-соединение и попробуйте снова.")
+    except requests.exceptions.RequestException as e:
+        raise ReceiptError(f"Не удалось соединиться с сервером распознавания: {e}")
+
+    if resp.status_code == 401:
+        raise ReceiptError("Неверный API-ключ OpenAI. Проверьте его в «Настройках распознавания».")
+    if resp.status_code == 429:
+        raise ReceiptError("Превышен лимит запросов к API. Подождите немного и попробуйте снова.")
+    if resp.status_code != 200:
+        raise ReceiptError(f"Сервер вернул ошибку ({resp.status_code}): {resp.text[:300]}")
+
+    try:
+        data = resp.json()
+    except ValueError:
+        raise ReceiptError("Сервер вернул некорректный ответ.")
+
+    try:
+        tool_calls = data["choices"][0]["message"].get("tool_calls") or []
+    except (KeyError, IndexError, TypeError):
+        raise ReceiptError("Не удалось разобрать выписку — модель вернула неожиданный ответ.")
+
+    tool_call = next((c for c in tool_calls if c.get("function", {}).get("name") == "record_statement"), None)
+    if not tool_call:
+        raise ReceiptError("Не удалось разобрать выписку — модель не вернула структурированный ответ.")
+
+    try:
+        fields = json.loads(tool_call["function"]["arguments"])
+    except (KeyError, ValueError):
+        raise ReceiptError("Не удалось разобрать выписку — не получилось прочитать ответ модели.")
+
+    parsed = []
+    for item in fields.get("transactions") or []:
+        date_val = _valid_iso_date(item.get("date"))
+        try:
+            amount_val = float(item.get("amount"))
+        except (TypeError, ValueError):
+            amount_val = None
+        if date_val is None or not amount_val:
+            continue
+        parsed.append({"date": date_val, "amount": amount_val, "note": (item.get("note") or "").strip()})
+
+    if not parsed:
+        raise ReceiptError("Не удалось найти ни одной операции в выписке.")
+
+    return parsed, truncated
