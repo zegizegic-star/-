@@ -35,14 +35,25 @@ const SERVICE_LABELS = {
   other: 'Другое',
 };
 
-const CORS_HEADERS = {
-  'Access-Control-Allow-Origin': 'https://ip-zashita.ru',
-  'Access-Control-Allow-Methods': 'POST, OPTIONS',
-  'Access-Control-Allow-Headers': 'Content-Type',
-};
+// Allowed while the site still lives on github.io; remove that entry
+// once the ip-zashita.ru domain is live and DNS has switched over.
+const ALLOWED_ORIGINS = [
+  'https://ip-zashita.ru',
+  'https://zegizegic-star.github.io',
+];
 
-function json(statusCode, body) {
-  return { statusCode, headers: { ...CORS_HEADERS, 'Content-Type': 'application/json' }, body: JSON.stringify(body) };
+function corsHeaders(event) {
+  const requestOrigin = (event.headers && (event.headers.origin || event.headers.Origin)) || '';
+  const origin = ALLOWED_ORIGINS.includes(requestOrigin) ? requestOrigin : ALLOWED_ORIGINS[0];
+  return {
+    'Access-Control-Allow-Origin': origin,
+    'Access-Control-Allow-Methods': 'POST, OPTIONS',
+    'Access-Control-Allow-Headers': 'Content-Type',
+  };
+}
+
+function json(statusCode, body, headers) {
+  return { statusCode, headers: { ...headers, 'Content-Type': 'application/json' }, body: JSON.stringify(body) };
 }
 
 let transporter;
@@ -62,24 +73,26 @@ function getTransporter() {
 }
 
 module.exports.handler = async function (event) {
+  const headers = corsHeaders(event);
+
   if (event.httpMethod === 'OPTIONS') {
-    return { statusCode: 204, headers: CORS_HEADERS, body: '' };
+    return { statusCode: 204, headers, body: '' };
   }
   if (event.httpMethod !== 'POST') {
-    return json(405, { error: 'Method not allowed' });
+    return json(405, { error: 'Method not allowed' }, headers);
   }
 
   let data;
   try {
     data = JSON.parse(event.body || '{}');
   } catch (e) {
-    return json(400, { error: 'Invalid JSON' });
+    return json(400, { error: 'Invalid JSON' }, headers);
   }
 
   // Honeypot field: real visitors never fill it in. If it's non-empty,
   // pretend success without sending anything.
   if (data._honey) {
-    return json(200, { ok: true });
+    return json(200, { ok: true }, headers);
   }
 
   const name = String(data.name || '').trim();
@@ -91,7 +104,7 @@ module.exports.handler = async function (event) {
 
   const emailValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
   if (!name || name.length < 2 || !emailValid || !service || description.length < 10 || !consent) {
-    return json(400, { error: 'Validation failed' });
+    return json(400, { error: 'Validation failed' }, headers);
   }
 
   const serviceLabel = SERVICE_LABELS[service] || service;
@@ -108,8 +121,8 @@ module.exports.handler = async function (event) {
       text: lines.join('\n'),
     });
   } catch (e) {
-    return json(502, { error: 'Delivery failed' });
+    return json(502, { error: 'Delivery failed' }, headers);
   }
 
-  return json(200, { ok: true });
+  return json(200, { ok: true }, headers);
 };
