@@ -2030,6 +2030,45 @@ main > section { padding-block: var(--section-pad); }
 .article-download-text { color: var(--c-muted); font-size: var(--fs-small); margin: 0; max-width: 34rem; }
 .article-download .btn { flex-shrink: 0; }
 
+.article-share {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-sm) var(--space-md);
+  margin: var(--space-lg) 0;
+  padding: var(--space-md) var(--space-lg);
+  background: var(--c-white);
+  border: 1px solid var(--c-line);
+  border-radius: var(--r-md);
+}
+.article-share-label { font-weight: 600; color: var(--c-navy); margin: 0; }
+.article-share-actions { display: flex; flex-wrap: wrap; gap: var(--space-xs); }
+.share-btn {
+  display: inline-flex;
+  align-items: center;
+  font: inherit;
+  font-size: var(--fs-small);
+  font-weight: 500;
+  color: var(--c-navy);
+  background: var(--c-paper-dim);
+  border: 1px solid var(--c-line);
+  padding: 0.5em 1.1em;
+  border-radius: var(--r-pill);
+  cursor: pointer;
+  transition: background var(--t-fast), border-color var(--t-fast), color var(--t-fast);
+}
+.share-btn:hover,
+.share-btn:focus-visible {
+  background: var(--c-gold);
+  border-color: var(--c-gold);
+  color: var(--c-navy);
+}
+.share-btn.is-copied {
+  background: var(--c-navy);
+  border-color: var(--c-navy);
+  color: var(--c-white);
+}
+
 /* Blog index */
 .blog-index-inner { max-width: 56rem; }
 .blog-list {

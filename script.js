@@ -1013,6 +1013,49 @@
   }
 
   /* -------------------------------------------------------------------
+     ARTICLE SHARE
+     Builds share links from the page's actual URL at runtime (not a
+     hardcoded domain), so links work today on github.io and keep working
+     unchanged after the ip-zashita.ru migration.
+     ---------------------------------------------------------------- */
+  function initArticleShare() {
+    const block = qs('.article-share');
+    if (!block) return;
+
+    const url = window.location.href;
+    const title = document.title;
+    const encodedUrl = encodeURIComponent(url);
+    const encodedTitle = encodeURIComponent(title);
+
+    const tg = qs('[data-share="telegram"]', block);
+    if (tg) tg.href = `https://t.me/share/url?url=${encodedUrl}&text=${encodedTitle}`;
+
+    const vk = qs('[data-share="vk"]', block);
+    if (vk) vk.href = `https://vk.com/share.php?url=${encodedUrl}&title=${encodedTitle}`;
+
+    const wa = qs('[data-share="whatsapp"]', block);
+    if (wa) wa.href = `https://wa.me/?text=${encodedTitle}%20${encodedUrl}`;
+
+    const copyBtn = qs('[data-share="copy"]', block);
+    if (copyBtn) {
+      copyBtn.addEventListener('click', async () => {
+        const original = copyBtn.textContent;
+        try {
+          await navigator.clipboard.writeText(url);
+        } catch (err) {
+          window.prompt('Скопируйте ссылку:', url);
+        }
+        copyBtn.textContent = 'Скопировано!';
+        copyBtn.classList.add('is-copied');
+        setTimeout(() => {
+          copyBtn.textContent = original;
+          copyBtn.classList.remove('is-copied');
+        }, 2000);
+      });
+    }
+  }
+
+  /* -------------------------------------------------------------------
      INIT
      ---------------------------------------------------------------- */
   document.addEventListener('DOMContentLoaded', () => {
@@ -1032,6 +1075,7 @@
     initDiagnosticTool();
     initProcessMap();
     initGlossary();
+    initArticleShare();
     initFooterYear();
     initMobileCta();
     initReadingProgress();
