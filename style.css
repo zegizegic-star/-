@@ -1161,7 +1161,6 @@ main > section { padding-block: var(--section-pad); }
   font-size: clamp(2rem, 1.7rem + 1vw, 2.6rem);
   color: var(--c-navy);
 }
-.price-desc { color: var(--c-muted); font-size: var(--fs-small); margin-top: 0.3rem; margin-bottom: var(--space-md); }
 .price-value + .price-features { margin-top: var(--space-md); }
 
 .price-features { display: flex; flex-direction: column; gap: 0.7rem; margin-bottom: var(--space-lg); flex-grow: 1; }
@@ -1199,7 +1198,6 @@ main > section { padding-block: var(--section-pad); }
 }
 .price-card--featured h3,
 .price-card--featured .price-value { color: var(--c-white); }
-.price-card--featured .price-desc { color: rgba(255,255,255,0.65); }
 .price-card--featured .price-features li { color: rgba(255,255,255,0.85); }
 
 .pricing-note {
