@@ -505,6 +505,17 @@
         validate: (v) =>
           /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v.trim()) ? '' : 'Введите корректный email.',
       },
+      phone: {
+        el: form.elements.phone,
+        error: qs('#error-phone'),
+        validate: (v) => {
+          const digits = v.replace(/\D/g, '');
+          const cb = form.elements.callback;
+          if (cb && cb.checked && !digits) return 'Укажите номер телефона, чтобы я мог перезвонить.';
+          if (v.trim() && digits.length < 10) return 'Введите корректный номер телефона.';
+          return '';
+        },
+      },
       service: {
         el: form.elements.service,
         error: qs('#error-service'),
@@ -539,6 +550,12 @@
         });
       }
     });
+
+    if (form.elements.callback && fields.phone.error) {
+      form.elements.callback.addEventListener('change', () => {
+        fields.phone.error.textContent = fields.phone.validate(fields.phone.el.value);
+      });
+    }
 
     form.addEventListener('submit', (event) => {
       event.preventDefault();
@@ -758,7 +775,8 @@
     const situationLabels = {
       'blocking-defense': 'блокировкой карточки или кабинета',
       'trademark-defense': 'претензией о нарушении прав',
-      litigation: 'контрафактом в чужой карточке',
+      litigation: 'копией вашей карточки',
+      'payout-delay': 'задержкой выплат',
       'trademark-registration': 'регистрацией товарного знака',
     };
     const nextSteps = {
@@ -776,6 +794,11 @@
         'Зафиксируйте нарушение — скриншоты карточки нарушителя с датой и временем.',
         'Соберите доказательства ваших прав на объект (свидетельство, авторство, договоры).',
         'Свяжитесь со мной для подготовки претензии и обращения к площадке.',
+      ],
+      'payout-delay': [
+        'Соберите сведения о невыплаченных суммах и сроках, сделайте скриншоты уведомлений и переписки с площадкой с датой.',
+        'Проверьте в личном кабинете статус выплат и основание удержания, если оно указано.',
+        'Свяжитесь со мной для анализа ситуации и подготовки претензии к площадке.',
       ],
       'trademark-registration': [
         'Определите точный перечень товаров и услуг (классы МКТУ) для обозначения.',
@@ -795,7 +818,8 @@
       const isUrgentCase =
         situation === 'blocking-defense' ||
         situation === 'trademark-defense' ||
-        situation === 'litigation';
+        situation === 'litigation' ||
+        situation === 'payout-delay';
       const isUrgent = isUrgentCase && (timing === 'urgent' || timing === 'soon');
 
       resultBadge.textContent = isUrgent ? 'Высокий приоритет' : 'Стандартный срок';
@@ -954,6 +978,12 @@
         'Определяю: обращаться к площадке за блокировкой карточки или готовить претензию сразу.',
         'Советую, как действовать, если нарушитель не реагирует на первое обращение.',
         'Добиваюсь блокировки карточки нарушителя и взыскиваю компенсацию.',
+      ],
+      'payout-delay': [
+        'Выясняю причину задержки или невыплаты, фиксирую суммы, сроки и переписку с площадкой.',
+        'Выбираю путь: обращение к площадке, претензия или иск.',
+        'Объясняю, что и в каком порядке делать, чтобы не потерять права на выручку.',
+        'Направляю претензию, добиваюсь перечисления средств, при необходимости иду в суд.',
       ],
       'trademark-registration': [
         'Проверяю обозначение по базам Роспатента и подбираю классы МКТУ.',

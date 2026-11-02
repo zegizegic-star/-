@@ -1493,13 +1493,14 @@ main > section { padding-block: var(--section-pad); }
 .diagnostic-print-plan { display: none; }
 
 @media print {
-  body * { visibility: hidden; }
-  .diagnostic-print-plan, .diagnostic-print-plan * { visibility: visible; }
+  html, body { background: #fff !important; }
+  .skip-link, .site-header, .mobile-nav, .site-footer, .mobile-cta,
+  main > section:not(.diagnostic),
+  .diagnostic > .section-divider, .diagnostic .section-head, .diagnostic-panel { display: none !important; }
+  .diagnostic { padding: 0 !important; background: none !important; }
   .diagnostic-print-plan {
     display: block;
-    position: absolute;
-    top: 0;
-    left: 0;
+    position: static;
     width: 100%;
     padding: 2cm;
     font-family: var(--f-body);
@@ -2095,3 +2096,11 @@ main > section { padding-block: var(--section-pad); }
 .blog-list-item h2 { font-size: var(--fs-h3); margin: 0 0 var(--space-2xs); color: var(--c-navy); }
 .blog-list-item p { color: var(--c-muted); margin-bottom: var(--space-sm); }
 .blog-list-link { font-weight: 600; color: var(--c-gold-dark); }
+
+/* --- Правки по замечаниям --- */
+.process-map-select { margin: 2rem 0 0; }
+.cases-grid .case-card:last-child:nth-child(odd) { grid-column: 1 / -1; }
+.pricing-grid { grid-template-columns: repeat(auto-fit, minmax(min(100%, 20rem), 1fr)); max-width: 56rem; margin-inline: auto; }
+.price-card--featured { grid-column: auto; }
+.price-card--featured .price-description { color: rgba(255, 255, 255, 0.88); }
+.contact-max { margin-top: 0.75rem; font-size: var(--fs-small); }
