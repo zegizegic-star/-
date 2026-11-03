@@ -479,14 +479,14 @@
      10. CONTACT FORM
      Client-side validation with inline, screen-reader-announced errors
      (the markup wires each input to a #error-* span via aria-describedby).
-     Submission posts to FormSubmit.co (see FORM_ENDPOINT below), which
-     relays the data to the firm's inbox by email — no custom backend.
+     Submission posts JSON to the Yandex Cloud Function, which relays
+     the data to the firm's inbox by email.
      ---------------------------------------------------------------- */
   function initContactForm() {
     const form = qs('#contactForm');
     if (!form) return;
 
-    const FORM_ENDPOINT = 'https://formsubmit.co/ajax/sergeyvlg777@yandex.ru';
+    const FORM_ENDPOINT = 'https://functions.yandexcloud.net/d4eq6os6n9lachp5pdf4';
 
     const successBox = qs('#formSuccess');
     const errorBox = qs('#formError');
@@ -580,13 +580,25 @@
       if (successBox) successBox.hidden = true;
       if (errorBox) errorBox.hidden = true;
 
+      const formData = new FormData(form);
+      const payload = Object.fromEntries(formData.entries());
+      payload.callback = Boolean(form.elements.callback && form.elements.callback.checked);
+      payload.consent = Boolean(form.elements.consent && form.elements.consent.checked);
+
       fetch(FORM_ENDPOINT, {
         method: 'POST',
-        headers: { Accept: 'application/json' },
-        body: new FormData(form),
+        headers: {
+          Accept: 'application/json',
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(payload),
       })
         .then((res) => {
           if (!res.ok) throw new Error('Request failed');
+          return res.json();
+        })
+        .then((result) => {
+          if (!result || result.ok !== true) throw new Error('Request failed');
           form.reset();
           if (successBox) {
             successBox.hidden = false;
