@@ -2103,4 +2103,3 @@ main > section { padding-block: var(--section-pad); }
 .pricing-grid { grid-template-columns: repeat(auto-fit, minmax(min(100%, 20rem), 1fr)); max-width: 56rem; margin-inline: auto; }
 .price-card--featured { grid-column: auto; }
 .price-card--featured .price-description { color: rgba(255, 255, 255, 0.88); }
-.contact-max { margin-top: 0.75rem; font-size: var(--fs-small); }
