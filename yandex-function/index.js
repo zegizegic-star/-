@@ -1,23 +1,6 @@
-/* Yandex Cloud Function — receives the site's contact form (as JSON)
-   and emails it via SMTP. Runs on servers physically in Russia,
-   unlike the previous FormSubmit.co setup, so personal data is first
-   recorded/processed in the RF as required by 152-FZ.
-
-   Runtime: Node.js 18. Needs the "nodemailer" dependency — deploy the
-   zip built alongside this file (index.js + package.json +
-   node_modules), not just this file pasted into the console editor.
-
-   Required environment variables (set in the function's config):
-     SMTP_USER — the sending Yandex mailbox, e.g. name@yandex.ru
-     SMTP_PASS — an app password for that mailbox (not the normal
-                 account password — generate one in Yandex ID security
-                 settings, "Пароли приложений")
-     TO_EMAIL  — where submissions should land (defaults to SMTP_USER
-                 if not set, so you can send and receive on the same
-                 mailbox)
-
-   Required setting: enable public HTTP access on the function/trigger
-   so the browser can call it directly (no auth token needed).
+/* Yandex Cloud Function: validates contact-form submissions and sends them by Yandex SMTP.
+   Required environment variables: SMTP_USER, SMTP_PASS; optional TO_EMAIL.
+   Deploy with the nodemailer dependency from package.json.
 */
 
 const nodemailer = require('nodemailer');
@@ -25,6 +8,7 @@ const nodemailer = require('nodemailer');
 const SERVICE_LABELS = {
   'seller-protection': 'Защита продавцов маркетплейсов',
   'blocking-defense': 'Защита от блокировок и обвинений',
+  'payout-delay': 'Задержка выплат',
   litigation: 'Претензионная и судебная работа',
   'patent-troll': 'Защита от патентных троллей',
   'trademark-defense': 'Защита товарных знаков',
@@ -35,30 +19,42 @@ const SERVICE_LABELS = {
   other: 'Другое',
 };
 
-// Allowed while the site still lives on github.io; remove that entry
-// once the ip-zashita.ru domain is live and DNS has switched over.
 const ALLOWED_ORIGINS = [
   'https://ip-zashita.ru',
   'https://zegizegic-star.github.io',
 ];
 
-function corsHeaders(event) {
-  const requestOrigin = (event.headers && (event.headers.origin || event.headers.Origin)) || '';
-  const origin = ALLOWED_ORIGINS.includes(requestOrigin) ? requestOrigin : ALLOWED_ORIGINS[0];
-  return {
-    'Access-Control-Allow-Origin': origin,
+function getRequestOrigin(event) {
+  const headers = event.headers || {};
+  return headers.origin || headers.Origin || '';
+}
+
+function corsHeaders(origin) {
+  const headers = {
     'Access-Control-Allow-Methods': 'POST, OPTIONS',
     'Access-Control-Allow-Headers': 'Content-Type',
+    'Vary': 'Origin',
   };
+  if (ALLOWED_ORIGINS.includes(origin)) {
+    headers['Access-Control-Allow-Origin'] = origin;
+  }
+  return headers;
 }
 
 function json(statusCode, body, headers) {
-  return { statusCode, headers: { ...headers, 'Content-Type': 'application/json' }, body: JSON.stringify(body) };
+  return {
+    statusCode,
+    headers: { ...headers, 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  };
 }
 
 let transporter;
 function getTransporter() {
   if (!transporter) {
+    if (!process.env.SMTP_USER || !process.env.SMTP_PASS) {
+      throw new Error('SMTP configuration is missing');
+    }
     transporter = nodemailer.createTransport({
       host: 'smtp.yandex.ru',
       port: 465,
@@ -73,8 +69,12 @@ function getTransporter() {
 }
 
 module.exports.handler = async function (event) {
-  const headers = corsHeaders(event);
+  const origin = getRequestOrigin(event);
+  const headers = corsHeaders(origin);
 
+  if (origin && !ALLOWED_ORIGINS.includes(origin)) {
+    return json(403, { error: 'Origin not allowed' }, headers);
+  }
   if (event.httpMethod === 'OPTIONS') {
     return { statusCode: 204, headers, body: '' };
   }
@@ -89,26 +89,41 @@ module.exports.handler = async function (event) {
     return json(400, { error: 'Invalid JSON' }, headers);
   }
 
-  // Honeypot field: real visitors never fill it in. If it's non-empty,
-  // pretend success without sending anything.
+  // Honeypot: silently accept bot submissions without sending email.
   if (data._honey) {
     return json(200, { ok: true }, headers);
   }
 
   const name = String(data.name || '').trim();
   const email = String(data.email || '').trim();
+  const phone = String(data.phone || '').trim();
   const company = String(data.company || '').trim();
   const service = String(data.service || '').trim();
   const description = String(data.description || '').trim();
-  const consent = Boolean(data.consent);
+  const callback = data.callback === true;
+  const consent = data.consent === true;
 
   const emailValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
-  if (!name || name.length < 2 || !emailValid || !service || description.length < 10 || !consent) {
+  const phoneDigits = phone.replace(/\D/g, '');
+
+  if (
+    name.length < 2 || name.length > 100 ||
+    email.length > 254 || !emailValid ||
+    phone.length > 40 ||
+    (phone && phoneDigits.length < 10) ||
+    (callback && phoneDigits.length < 10) ||
+    company.length > 150 ||
+    !Object.prototype.hasOwnProperty.call(SERVICE_LABELS, service) ||
+    description.length < 10 || description.length > 5000 ||
+    !consent
+  ) {
     return json(400, { error: 'Validation failed' }, headers);
   }
 
-  const serviceLabel = SERVICE_LABELS[service] || service;
+  const serviceLabel = SERVICE_LABELS[service];
   const lines = [`Имя: ${name}`, `Email: ${email}`];
+  if (phone) lines.push(`Телефон: ${phone}`);
+  if (callback) lines.push('Нужен срочный обратный звонок: да');
   if (company) lines.push(`Компания: ${company}`);
   lines.push(`Услуга: ${serviceLabel}`, '', 'Описание задачи:', description);
 
@@ -117,10 +132,11 @@ module.exports.handler = async function (event) {
       from: process.env.SMTP_USER,
       to: process.env.TO_EMAIL || process.env.SMTP_USER,
       replyTo: email,
-      subject: `Новая заявка с сайта — ${serviceLabel}`,
+      subject: `${callback ? '[СРОЧНО] ' : ''}Новая заявка с сайта — ${serviceLabel}`,
       text: lines.join('\n'),
     });
-  } catch (e) {
+  } catch (error) {
+    console.error('Contact form email delivery failed:', error.message);
     return json(502, { error: 'Delivery failed' }, headers);
   }
 
