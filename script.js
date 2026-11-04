@@ -585,6 +585,11 @@
       payload.callback = Boolean(form.elements.callback && form.elements.callback.checked);
       payload.consent = Boolean(form.elements.consent && form.elements.consent.checked);
 
+      // Prevent the submit button from remaining in the loading state forever
+      // if the network or the function does not return a response.
+      const controller = new AbortController();
+      const requestTimeout = window.setTimeout(() => controller.abort(), 20000);
+
       fetch(FORM_ENDPOINT, {
         method: 'POST',
         headers: {
@@ -592,6 +597,7 @@
           'Content-Type': 'application/json',
         },
         body: JSON.stringify(payload),
+        signal: controller.signal,
       })
         .then((res) => {
           if (!res.ok) throw new Error('Request failed');
@@ -614,6 +620,7 @@
           }
         })
         .finally(() => {
+          window.clearTimeout(requestTimeout);
           submitBtn.disabled = false;
           if (submitLabel) submitLabel.textContent = originalLabel;
         });
