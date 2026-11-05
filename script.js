@@ -606,6 +606,9 @@
         .then((result) => {
           if (!result || result.ok !== true) throw new Error('Request failed');
           form.reset();
+          Object.values(fields).forEach(({ error }) => {
+            if (error) error.textContent = '';
+          });
           if (successBox) {
             successBox.hidden = false;
             successBox.setAttribute('tabindex', '-1');
