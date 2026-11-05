@@ -2103,3 +2103,58 @@ main > section { padding-block: var(--section-pad); }
 .pricing-grid { grid-template-columns: repeat(auto-fit, minmax(min(100%, 20rem), 1fr)); max-width: 56rem; margin-inline: auto; }
 .price-card--featured { grid-column: auto; }
 .price-card--featured .price-description { color: rgba(255, 255, 255, 0.88); }
+
+ 
+/* About section: compact, balanced desktop composition */
+.why-grid {
+  grid-template-columns: minmax(0, 1fr);
+  gap: clamp(1.5rem, 3vw, 2.5rem);
+}
+.why-content {
+  max-width: 48rem;
+}
+.why-content .section-lead {
+  max-width: 42rem;
+}
+.why-features {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: clamp(0.75rem, 1.8vw, 1.25rem);
+}
+.why-feature {
+  min-height: 12rem;
+  padding: clamp(1.15rem, 2vw, 1.65rem);
+}
+.why-quote {
+  grid-column: auto;
+  width: 100%;
+  max-width: 58rem;
+  justify-self: center;
+  align-items: center;
+  margin: 0 auto;
+}
+.why-quote-portrait {
+  width: 112px;
+  height: 134px;
+}
+.why-quote-content {
+  max-width: 42rem;
+}
+@media (max-width: 719px) {
+  .why-features {
+    grid-template-columns: 1fr;
+  }
+  .why-feature {
+    min-height: 0;
+  }
+  .why-quote {
+    align-items: flex-start;
+    gap: 0.9rem;
+  }
+  .why-quote-portrait {
+    width: 84px;
+    height: 102px;
+  }
+  .why-quote p {
+    font-size: clamp(1.05rem, 4vw, 1.35rem);
+  }
+}
