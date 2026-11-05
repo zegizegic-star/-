@@ -21,6 +21,11 @@
     <priority>0.6</priority>
   </url>
   <url>
+    <loc>https://ip-zashita.ru/zashchita-ot-pretenziy-pravoobladateley.html</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
     <loc>https://ip-zashita.ru/pretenziya-tovarny-znak.html</loc>
     <changefreq>yearly</changefreq>
     <priority>0.6</priority>
