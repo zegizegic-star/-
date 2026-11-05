@@ -647,23 +647,25 @@
      ---------------------------------------------------------------- */
   function initMobileCta() {
     const bar = qs('.mobile-cta');
+    if (!bar) return;
+
     const contactSection = qs('#contact');
     const footer = qs('.site-footer');
-    if (!bar || !contactSection) return;
-
     const state = { contact: false, footer: false, scrollingDown: false };
     const applyState = () => {
       bar.classList.toggle('is-hidden', state.contact || state.footer || state.scrollingDown);
     };
 
-    const contactObserver = new IntersectionObserver(
-      ([entry]) => {
-        state.contact = entry.isIntersecting;
-        applyState();
-      },
-      { rootMargin: '0px 0px -40% 0px' }
-    );
-    contactObserver.observe(contactSection);
+    if (contactSection) {
+      const contactObserver = new IntersectionObserver(
+        ([entry]) => {
+          state.contact = entry.isIntersecting;
+          applyState();
+        },
+        { rootMargin: '0px 0px -40% 0px' }
+      );
+      contactObserver.observe(contactSection);
+    }
 
     if (footer) {
       const footerObserver = new IntersectionObserver(([entry]) => {
