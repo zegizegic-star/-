@@ -1884,6 +1884,13 @@ main > section { padding-block: var(--section-pad); }
 @media (min-width: 1024px) {
   .mobile-cta { display: none; }
 }
+/* Reserve space for the fixed mobile CTA so it does not cover page content. */
+@media (max-width: 1023px) {
+  body {
+    padding-bottom: calc(4.5rem + env(safe-area-inset-bottom, 0px));
+  }
+}
+
 /* ---------------------------------------------------------------------------
    21b. READING PROGRESS BAR
    Thin fixed bar at the very top of long article pages, filled by
