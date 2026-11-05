@@ -735,7 +735,15 @@
   function initServiceQuickSelect() {
     const triggers = qsa('[data-service]');
     const select = qs('#service');
-    if (!triggers.length || !select) return;
+    if (!select) return;
+
+    // Restore the selected service when arriving from an article or service page.
+    const requestedService = new URLSearchParams(window.location.search).get('service');
+    if (requestedService && qs(`option[value="${requestedService}"]`, select)) {
+      select.value = requestedService;
+    }
+
+    if (!triggers.length) return;
 
     triggers.forEach((trigger) => {
       trigger.addEventListener('click', () => {
