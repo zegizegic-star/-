@@ -505,17 +505,6 @@
         validate: (v) =>
           /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v.trim()) ? '' : 'Введите корректный email.',
       },
-      phone: {
-        el: form.elements.phone,
-        error: qs('#error-phone'),
-        validate: (v) => {
-          const digits = v.replace(/\D/g, '');
-          const cb = form.elements.callback;
-          if (cb && cb.checked && !digits) return 'Укажите номер телефона, чтобы я мог перезвонить.';
-          if (v.trim() && digits.length < 10) return 'Введите корректный номер телефона.';
-          return '';
-        },
-      },
       service: {
         el: form.elements.service,
         error: qs('#error-service'),
@@ -551,12 +540,6 @@
       }
     });
 
-    if (form.elements.callback && fields.phone.error) {
-      form.elements.callback.addEventListener('change', () => {
-        fields.phone.error.textContent = fields.phone.validate(fields.phone.el.value);
-      });
-    }
-
     form.addEventListener('submit', (event) => {
       event.preventDefault();
 
@@ -582,7 +565,6 @@
 
       const formData = new FormData(form);
       const payload = Object.fromEntries(formData.entries());
-      payload.callback = Boolean(form.elements.callback && form.elements.callback.checked);
       payload.consent = Boolean(form.elements.consent && form.elements.consent.checked);
 
       // Prevent the submit button from remaining in the loading state forever
