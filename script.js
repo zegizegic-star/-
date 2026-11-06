@@ -1076,6 +1076,26 @@
   }
 
   /* -------------------------------------------------------------------
+     CONTACT LINK TRACKING
+     Track clicks on direct contact links, excluding share buttons.
+     ---------------------------------------------------------------- */
+  function initContactLinkTracking() {
+    document.addEventListener('click', (event) => {
+      const link = event.target.closest('a[href]');
+      if (!link || link.closest('[data-share]')) return;
+
+      const href = link.getAttribute('href') || '';
+      let goal = '';
+      if (/^mailto:/i.test(href)) goal = 'contact_email';
+      else if (/^tel:/i.test(href)) goal = 'contact_phone';
+      else if (/^https?:\/\/(?:www\.)?t\.me\//i.test(href)) goal = 'contact_telegram';
+      else if (/^https?:\/\/(?:www\.)?max\.ru\//i.test(href)) goal = 'contact_max';
+
+      if (goal && typeof ym === 'function') ym(114102276, 'reachGoal', goal);
+    });
+  }
+
+  /* -------------------------------------------------------------------
      ARTICLE SHARE
      Builds share links from the page's actual URL at runtime (not a
      hardcoded domain), so links work today on github.io and keep working
@@ -1134,6 +1154,7 @@
     initHeroWatermarkDraw();
     initLazyLoading();
     initContactForm();
+    initContactLinkTracking();
     initServiceQuickSelect();
     initDiagnosticTool();
     initProcessMap();
