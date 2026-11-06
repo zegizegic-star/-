@@ -605,6 +605,7 @@
         })
         .then((result) => {
           if (!result || result.ok !== true) throw new Error('Request failed');
+          if (typeof ym === 'function') ym(114102276, 'reachGoal', 'form_submit_success');
           form.reset();
           Object.values(fields).forEach(({ error }) => {
             if (error) error.textContent = '';
